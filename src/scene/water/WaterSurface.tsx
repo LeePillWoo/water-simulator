@@ -6,6 +6,7 @@ import { WaveSolver } from '../../physics/waveSolver'
 import { tiltState } from './tiltState'
 import { envMapState } from './envMap'
 import { waterFieldState } from './waterFieldState'
+import { createHeightFieldTexture } from './heightFieldTexture'
 import { waterVertexShader, waterFragmentShader } from './shaders'
 import { GRID_RES, TANK_WIDTH, TANK_DEPTH, REST_WATER_DEPTH, SIM_GRAVITY, SHORE_FADE_RANGE } from '../../labLayout'
 
@@ -23,6 +24,7 @@ function buildGeometry() {
   const positions = new Float32Array(SIZE * 3)
   const normals = new Float32Array(SIZE * 3)
   const uvs = new Float32Array(SIZE * 2)
+  const overflow = new Float32Array(SIZE)
   const dx = TANK_WIDTH / N
   const dz = TANK_DEPTH / N
 
@@ -51,11 +53,13 @@ function buildGeometry() {
 
   const posAttr = new THREE.BufferAttribute(positions, 3)
   const normAttr = new THREE.BufferAttribute(normals, 3)
+  const overflowAttr = new THREE.BufferAttribute(overflow, 1)
   geometry.setAttribute('position', posAttr)
   geometry.setAttribute('normal', normAttr)
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+  geometry.setAttribute('overflow', overflowAttr)
   geometry.setIndex(indices)
-  return { geometry, positions, normals, posAttr, normAttr }
+  return { geometry, positions, normals, overflow, posAttr, normAttr, overflowAttr }
 }
 
 /** 얕은물 시뮬레이션을 굴절/Fresnel/반사/스펙큘러로 합성해 그리는 실제 물 표면 메시. */
@@ -63,6 +67,7 @@ export function WaterSurface() {
   const meshRef = useRef<THREE.Mesh>(null)
   const built = useMemo(() => buildGeometry(), [])
   const solver = useMemo(() => new WaveSolver(), [])
+  const heightTexture = useMemo(() => createHeightFieldTexture(solver.h), [solver])
   const isRunning = useSimStore((s) => s.isRunning)
   const resetSignal = useSimStore((s) => s.resetSignal)
 
@@ -106,18 +111,21 @@ export function WaterSurface() {
 
   useEffect(() => {
     waterFieldState.solver = solver
+    waterFieldState.heightTexture = heightTexture
     return () => {
       waterFieldState.solver = null
+      waterFieldState.heightTexture = null
     }
-  }, [solver])
+  }, [solver, heightTexture])
 
   useEffect(() => {
     return () => {
       built.geometry.dispose()
       material.dispose()
       backgroundRT.dispose()
+      heightTexture.dispose()
     }
-  }, [built, material, backgroundRT])
+  }, [built, material, backgroundRT, heightTexture])
 
   useFrame((state, delta) => {
     const { gl: renderer, camera, scene } = state
@@ -145,9 +153,14 @@ export function WaterSurface() {
       built.normals[idx * 3] = solver.normals[idx * 3]
       built.normals[idx * 3 + 1] = solver.normals[idx * 3 + 1]
       built.normals[idx * 3 + 2] = solver.normals[idx * 3 + 2]
+      built.overflow[idx] = solver.overflow[idx]
     }
     built.posAttr.needsUpdate = true
     built.normAttr.needsUpdate = true
+    built.overflowAttr.needsUpdate = true
+
+    heightTexture.image.data = solver.h
+    heightTexture.needsUpdate = true
 
     camera.layers.disable(WATER_LAYER)
     renderer.setRenderTarget(backgroundRT)

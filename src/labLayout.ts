@@ -14,6 +14,7 @@ export const WAVE_DAMPING = 0.6 // 속도 감쇠 (1/s)
 export const HEIGHT_SMOOTH = 0.02 // 그리드 스케일 수치 노이즈 억제용 스무딩 계수
 export const MIN_WATER_DEPTH = 0.012 // 젖음-마름 경계: 수심이 이 아래로는 못 내려가게 막아 바닥을 뚫고 들어가는 것을 방지
 export const SHORE_FADE_RANGE = 0.08 // 이 수심 이하부터 옅어지며 마른 바닥이 비쳐 보이는 범위
+export const OVERFLOW_MARGIN = 0.02 // 벽 꼭대기에서 이만큼 여유를 두고 수위를 막아(넘침) 유리를 뚫고 올라가지 않게 함
 
 // 수조 기울이기 (마우스 흔들기)
 export const MAX_TILT_RAD = (22 * Math.PI) / 180

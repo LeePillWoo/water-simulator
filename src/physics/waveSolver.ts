@@ -2,11 +2,13 @@ import {
   GRID_RES,
   TANK_WIDTH,
   TANK_DEPTH,
+  TANK_WALL_HEIGHT,
   REST_WATER_DEPTH,
   SIM_GRAVITY,
   WAVE_DAMPING,
   HEIGHT_SMOOTH,
   MIN_WATER_DEPTH,
+  OVERFLOW_MARGIN,
 } from '../labLayout'
 
 const N = GRID_RES
@@ -18,6 +20,8 @@ const WAVE_SPEED = Math.sqrt(SIM_GRAVITY * REST_WATER_DEPTH)
 const MAX_SUBSTEP_DT = Math.min(DX, DZ) / (WAVE_SPEED * Math.SQRT2)
 const MAX_DT = 1 / 30
 const MIN_H = -REST_WATER_DEPTH + MIN_WATER_DEPTH
+const MAX_H = TANK_WALL_HEIGHT - REST_WATER_DEPTH - OVERFLOW_MARGIN
+const OVERFLOW_DECAY = 0.9
 
 /**
  * CPU shallow-water solver (linearized): height field `h` plus horizontal
@@ -34,6 +38,8 @@ export class WaveSolver {
   u = new Float32Array(SIZE)
   v = new Float32Array(SIZE)
   normals = new Float32Array(SIZE * 3)
+  /** 벽 위로 넘친 지점에서 1로 튀었다가 서서히 식는 거품 하이라이트 강도. */
+  overflow = new Float32Array(SIZE)
 
   private h2 = new Float32Array(SIZE)
   private u2 = new Float32Array(SIZE)
@@ -47,6 +53,7 @@ export class WaveSolver {
     this.h.fill(0)
     this.u.fill(0)
     this.v.fill(0)
+    this.overflow.fill(0)
     this.computeNormals()
   }
 
@@ -153,7 +160,7 @@ export class WaveSolver {
     }
     applyHeightBoundary(h2)
     if (HEIGHT_SMOOTH > 0) smoothHeight(h2)
-    clampDryFloor(h2, u2, v2)
+    clampToTankBounds(h2, u2, v2, this.overflow)
 
     this.h = h2
     this.h2 = h
@@ -214,11 +221,15 @@ function applyHeightBoundary(h2: Float32Array) {
 }
 
 /**
- * 젖음-마름(wetting-drying) 경계 조건: 수조가 기울어져 수심이 0으로 수렴하는
- * 얕은 쪽에서 수면이 바닥(y=0) 아래로 뚫고 내려가지 않도록 최소 수심으로 막는다.
- * 막힌 칸은 계속 물을 밀어내려는 속도도 죽여서 마른 경계에서 진동이 쌓이지 않게 한다.
+ * 수조 벽/바닥 경계 조건. 두 가지를 함께 막는다:
+ *  - 젖음-마름(wetting-drying): 기울어져 수심이 0으로 수렴하는 얕은 쪽에서
+ *    수면이 바닥(y=0) 아래로 뚫고 내려가지 않게 최소 수심으로 막는다.
+ *  - 넘침(overflow): 수위가 벽 꼭대기를 넘어서면 유리를 뚫고 올라가는 대신
+ *    그만큼을 버려(넘쳐 사라진 것으로 취급) 벽 높이 아래로 다시 막는다.
+ * 막힌 칸은 계속 밀어붙이는 속도도 죽여서 경계에서 진동이 쌓이지 않게 하고,
+ * 넘친 칸은 `overflow` 마스크를 잠깐 밝혔다가 서서히 식혀 거품 하이라이트로 쓴다.
  */
-function clampDryFloor(h2: Float32Array, u2: Float32Array, v2: Float32Array) {
+function clampToTankBounds(h2: Float32Array, u2: Float32Array, v2: Float32Array, overflow: Float32Array) {
   for (let j = 0; j <= N; j++) {
     const row = j * STRIDE
     for (let i = 0; i <= N; i++) {
@@ -227,6 +238,14 @@ function clampDryFloor(h2: Float32Array, u2: Float32Array, v2: Float32Array) {
         h2[idx] = MIN_H
         u2[idx] *= 0.2
         v2[idx] *= 0.2
+        overflow[idx] *= OVERFLOW_DECAY
+      } else if (h2[idx] > MAX_H) {
+        h2[idx] = MAX_H
+        u2[idx] *= 0.2
+        v2[idx] *= 0.2
+        overflow[idx] = 1
+      } else {
+        overflow[idx] *= OVERFLOW_DECAY
       }
     }
   }
