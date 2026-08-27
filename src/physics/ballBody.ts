@@ -18,6 +18,8 @@ export interface BallBody {
   position: THREE.Vector3
   velocity: THREE.Vector3
   prevSubmergedVolume: number
+  /** 이 공의 (x,z) 위치에서 샘플링한 로컬 수면 높이. 렌더링 쪽의 젖음/굴절 셰이딩이 참조한다. */
+  waterY: number
 }
 
 const bodies = new Map<number, BallBody>()
@@ -29,6 +31,13 @@ function sphereCapVolume(r: number, capHeight: number) {
 
 export function resetBodies() {
   bodies.clear()
+}
+
+/** 더 이상 존재하지 않는 공의 물리 상태를 정리한다 (물체 지우기/리셋 시 누수 방지). */
+export function pruneBodies(idsToKeep: Set<number>) {
+  for (const id of bodies.keys()) {
+    if (!idsToKeep.has(id)) bodies.delete(id)
+  }
 }
 
 const GOLDEN_ANGLE = 2.399963
@@ -56,6 +65,7 @@ export function getOrCreateBody(spec: BallSpec): BallBody {
     position: new THREE.Vector3(ox, BALL_DROP_HEIGHT, oz),
     velocity: new THREE.Vector3(0, 0, 0),
     prevSubmergedVolume: 0,
+    waterY: 0,
   }
   bodies.set(spec.id, body)
   return body
@@ -67,6 +77,7 @@ export function getOrCreateBody(spec: BallSpec): BallBody {
  */
 export function stepBody(body: BallBody, dt: number, solver: WaveSolver, accelX: number, accelZ: number) {
   const waterY = solver.sampleHeight(body.position.x, body.position.z)
+  body.waterY = waterY
   const bottomY = body.position.y - body.radius
   const submergedHeight = Math.min(Math.max(waterY - bottomY, 0), 2 * body.radius)
   const submergedVolume = sphereCapVolume(body.radius, submergedHeight)

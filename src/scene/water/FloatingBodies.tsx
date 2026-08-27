@@ -4,7 +4,8 @@ import type { Mesh } from 'three'
 import { useSimStore } from '../../store/useSimStore'
 import { waterFieldState } from './waterFieldState'
 import { tiltState } from './tiltState'
-import { getOrCreateBody, stepBody, resetBodies, BALL_MATERIALS } from '../../physics/ballBody'
+import { getOrCreateBody, stepBody, resetBodies, pruneBodies, BALL_MATERIALS } from '../../physics/ballBody'
+import { getOrCreateBallMaterial, pruneBallMaterials, disposeAllBallMaterials } from '../../physics/ballMaterial'
 import { SIM_GRAVITY } from '../../labLayout'
 
 /** 나무공/쇠공을 낙하시켜 부력·물속 저항·벽 충돌로 뜨거나 가라앉게 하고, 잠긴 부피 변화를 물결로 되먹인다. */
@@ -18,6 +19,17 @@ export function FloatingBodies() {
     resetBodies()
   }, [resetSignal])
 
+  useEffect(() => {
+    const ids = new Set(balls.map((b) => b.id))
+    for (const id of meshRefs.current.keys()) {
+      if (!ids.has(id)) meshRefs.current.delete(id)
+    }
+    pruneBodies(ids)
+    pruneBallMaterials(ids)
+  }, [balls])
+
+  useEffect(() => disposeAllBallMaterials, [])
+
   useFrame((_state, delta) => {
     const solver = waterFieldState.solver
     if (!solver || !isRunning) return
@@ -30,6 +42,9 @@ export function FloatingBodies() {
       stepBody(body, dt, solver, accelX, accelZ)
       const mesh = meshRefs.current.get(spec.id)
       mesh?.position.copy(body.position)
+      const { uniforms } = getOrCreateBallMaterial(spec)
+      uniforms.uWaterY.value = body.waterY
+      uniforms.uBallCenter.value.copy(body.position)
     }
   })
 
@@ -37,6 +52,7 @@ export function FloatingBodies() {
     <>
       {balls.map((spec) => {
         const mat = BALL_MATERIALS[spec.type]
+        const { material } = getOrCreateBallMaterial(spec)
         return (
           <mesh
             key={spec.id}
@@ -48,11 +64,11 @@ export function FloatingBodies() {
                 meshRefs.current.delete(spec.id)
               }
             }}
+            material={material}
             castShadow
             receiveShadow
           >
             <sphereGeometry args={[mat.radius, 24, 24]} />
-            <meshStandardMaterial color={mat.color} roughness={mat.roughness} metalness={mat.metalness} />
           </mesh>
         )
       })}
