@@ -132,8 +132,8 @@ export function WaterSurface() {
     }
 
     if (isRunning) {
-      const accelX = SIM_GRAVITY * Math.sin(tiltState.z)
-      const accelZ = SIM_GRAVITY * Math.sin(-tiltState.x)
+      const accelX = -SIM_GRAVITY * Math.sin(tiltState.z)
+      const accelZ = SIM_GRAVITY * Math.sin(tiltState.x)
       solver.step(delta, accelX, accelZ)
     }
 

@@ -22,8 +22,8 @@ export function FloatingBodies() {
     const solver = waterFieldState.solver
     if (!solver || !isRunning) return
     const dt = Math.min(delta, 1 / 30)
-    const accelX = SIM_GRAVITY * Math.sin(tiltState.z)
-    const accelZ = SIM_GRAVITY * Math.sin(-tiltState.x)
+    const accelX = -SIM_GRAVITY * Math.sin(tiltState.z)
+    const accelZ = SIM_GRAVITY * Math.sin(tiltState.x)
 
     for (const spec of balls) {
       const body = getOrCreateBody(spec)
