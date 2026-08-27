@@ -1,19 +1,27 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import type { Mesh } from 'three'
+import * as THREE from 'three'
+import type { Group } from 'three'
 import { useSimStore } from '../../store/useSimStore'
 import { waterFieldState } from './waterFieldState'
 import { tiltState } from './tiltState'
-import { getOrCreateBody, stepBody, resetBodies, pruneBodies, BALL_MATERIALS } from '../../physics/ballBody'
-import { getOrCreateBallMaterial, pruneBallMaterials, disposeAllBallMaterials } from '../../physics/ballMaterial'
+import { getOrCreateBody, stepBody, resetBodies, pruneBodies } from '../../physics/ballBody'
+import { getOrCreateBallMaterials, pruneBallMaterials, disposeAllBallMaterials } from '../../physics/ballMaterial'
+import { TOY_DEFS, type BallType } from '../../physics/toyTypes'
+import { playSplash } from '../../audio/soundEngine'
 import { SIM_GRAVITY } from '../../labLayout'
 
-/** 나무공/쇠공을 낙하시켜 부력·물속 저항·벽 충돌로 뜨거나 가라앉게 하고, 잠긴 부피 변화를 물결로 되먹인다. */
+// 모든 장난감 부품은 단위 구(반지름 1)를 부품별 스케일로 늘여 표현하므로,
+// 지오메트리 하나를 모든 부품·모든 공이 공유한다.
+const UNIT_SPHERE = new THREE.SphereGeometry(1, 20, 16)
+
+/** 나무공/쇠공/장난감들을 낙하시켜 부력·물속 저항·벽 충돌로 뜨거나 가라앉게 하고,
+ * 잠긴 부피 변화 및 첫 입수 충격을 물결·소리로 되먹인다. */
 export function FloatingBodies() {
   const balls = useSimStore((s) => s.balls)
   const isRunning = useSimStore((s) => s.isRunning)
   const resetSignal = useSimStore((s) => s.resetSignal)
-  const meshRefs = useRef(new Map<number, Mesh>())
+  const groupRefs = useRef(new Map<number, Group>())
 
   useEffect(() => {
     resetBodies()
@@ -21,8 +29,8 @@ export function FloatingBodies() {
 
   useEffect(() => {
     const ids = new Set(balls.map((b) => b.id))
-    for (const id of meshRefs.current.keys()) {
-      if (!ids.has(id)) meshRefs.current.delete(id)
+    for (const id of groupRefs.current.keys()) {
+      if (!ids.has(id)) groupRefs.current.delete(id)
     }
     pruneBodies(ids)
     pruneBallMaterials(ids)
@@ -39,39 +47,53 @@ export function FloatingBodies() {
 
     for (const spec of balls) {
       const body = getOrCreateBody(spec)
-      stepBody(body, dt, solver, accelX, accelZ)
-      const mesh = meshRefs.current.get(spec.id)
-      mesh?.position.copy(body.position)
-      const { uniforms } = getOrCreateBallMaterial(spec)
-      uniforms.uWaterY.value = body.waterY
-      uniforms.uBallCenter.value.copy(body.position)
+      stepBody(body, dt, solver, accelX, accelZ, (_type, intensity) => playSplash(intensity))
+      const group = groupRefs.current.get(spec.id)
+      group?.position.copy(body.position)
+      const { bodyUniforms } = getOrCreateBallMaterials(spec)
+      bodyUniforms.uWaterY.value = body.waterY
+      bodyUniforms.uBallCenter.value.copy(body.position)
     }
   })
 
   return (
     <>
-      {balls.map((spec) => {
-        const mat = BALL_MATERIALS[spec.type]
-        const { material } = getOrCreateBallMaterial(spec)
-        return (
-          <mesh
-            key={spec.id}
-            ref={(m) => {
-              if (m) {
-                meshRefs.current.set(spec.id, m)
-                m.position.copy(getOrCreateBody(spec).position)
-              } else {
-                meshRefs.current.delete(spec.id)
-              }
-            }}
-            material={material}
-            castShadow
-            receiveShadow
-          >
-            <sphereGeometry args={[mat.radius, 24, 24]} />
-          </mesh>
-        )
-      })}
+      {balls.map((spec) => (
+        <ToyGroup
+          key={spec.id}
+          groupRef={(g) => {
+            if (g) {
+              groupRefs.current.set(spec.id, g)
+              g.position.copy(getOrCreateBody(spec).position)
+            } else {
+              groupRefs.current.delete(spec.id)
+            }
+          }}
+          type={spec.type}
+          materials={getOrCreateBallMaterials(spec).materials}
+        />
+      ))}
     </>
+  )
+}
+
+interface ToyGroupProps {
+  type: BallType
+  materials: THREE.MeshStandardMaterial[]
+  groupRef: (g: Group | null) => void
+}
+
+function ToyGroup({ type, materials, groupRef }: ToyGroupProps) {
+  const parts = TOY_DEFS[type].parts
+  const scales = useMemo(
+    () => parts.map((p): [number, number, number] => [p.radius * p.scale[0], p.radius * p.scale[1], p.radius * p.scale[2]]),
+    [parts],
+  )
+  return (
+    <group ref={groupRef}>
+      {parts.map((part, i) => (
+        <mesh key={i} position={part.position} scale={scales[i]} geometry={UNIT_SPHERE} material={materials[i]} castShadow receiveShadow />
+      ))}
+    </group>
   )
 }

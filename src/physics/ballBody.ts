@@ -1,13 +1,9 @@
 import * as THREE from 'three'
 import type { WaveSolver } from './waveSolver'
-import type { BallSpec, BallType } from '../store/useSimStore'
+import type { BallSpec } from '../store/useSimStore'
+import type { BallType } from './toyTypes'
+import { TOY_DEFS } from './toyTypes'
 import { TANK_WIDTH, TANK_DEPTH, FLOOR_Y, SIM_GRAVITY, WATER_DENSITY, BALL_DROP_HEIGHT } from '../labLayout'
-
-/** 재질별 밀도(kg/m^3)와 반지름(m). 물(1000)보다 가벼우면 뜨고, 무거우면 가라앉는다. */
-export const BALL_MATERIALS: Record<BallType, { density: number; radius: number; color: string; roughness: number; metalness: number }> = {
-  wood: { density: 600, radius: 0.12, color: '#a9773f', roughness: 0.85, metalness: 0 },
-  iron: { density: 7800, radius: 0.1, color: '#9aa0a8', roughness: 0.3, metalness: 0.9 },
-}
 
 export interface BallBody {
   id: number
@@ -20,6 +16,8 @@ export interface BallBody {
   prevSubmergedVolume: number
   /** 이 공의 (x,z) 위치에서 샘플링한 로컬 수면 높이. 렌더링 쪽의 젖음/굴절 셰이딩이 참조한다. */
   waterY: number
+  /** 물에 잠겨 있는 중인지 — 진입 순간(첫 접촉)을 감지해 충격 스플래시를 한 번만 터뜨리는 데 쓴다. */
+  wasWet: boolean
 }
 
 const bodies = new Map<number, BallBody>()
@@ -40,21 +38,23 @@ export function pruneBodies(idsToKeep: Set<number>) {
   }
 }
 
-const GOLDEN_ANGLE = 2.399963
-
 export function getOrCreateBody(spec: BallSpec): BallBody {
   const existing = bodies.get(spec.id)
   if (existing) return existing
 
-  const mat = BALL_MATERIALS[spec.type]
-  const radius = mat.radius
+  const def = TOY_DEFS[spec.type]
+  const radius = def.physicsRadius
   const volume = (4 / 3) * Math.PI * radius ** 3
-  const mass = mat.density * volume
+  const mass = def.density * volume
 
-  const angle = spec.id * GOLDEN_ANGLE
-  const spread = Math.min(TANK_WIDTH, TANK_DEPTH) * 0.22
-  const ox = Math.cos(angle) * spread
-  const oz = Math.sin(angle) * spread
+  // 낙하 지점을 완전히 무작위로 뿌린다(각도 + 넓이 기준 균일 반지름)。
+  // 각도만 바꾸고 반지름을 고정하면 많이 떨어뜨렸을 때 도넛 모양으로 자리가
+  // 고정돼 보이므로, 반지름도 sqrt(random)으로 골라 원판 위에 고르게 퍼뜨린다.
+  const maxSpread = Math.min(TANK_WIDTH, TANK_DEPTH) * 0.38
+  const r = maxSpread * Math.sqrt(Math.random())
+  const angle = Math.random() * Math.PI * 2
+  const ox = Math.cos(angle) * r
+  const oz = Math.sin(angle) * r
 
   const body: BallBody = {
     id: spec.id,
@@ -66,22 +66,51 @@ export function getOrCreateBody(spec: BallSpec): BallBody {
     velocity: new THREE.Vector3(0, 0, 0),
     prevSubmergedVolume: 0,
     waterY: 0,
+    wasWet: false,
   }
   bodies.set(spec.id, body)
   return body
 }
 
+// 물에 처음 부딪히는 순간의 충격을 물결/소리로 환산할 때 쓰는 기준 운동량(kg·m/s).
+// 쇠공이 이 값 근처에서 강도 1(가장 크게 "퐁덩")이 되도록 잡았다.
+const SPLASH_REFERENCE_MOMENTUM = 180
+const SPLASH_IMPACT_VOLUME_COEFF = 0.00006
+const SPLASH_MIN_IMPACT_SPEED = 0.15
+
 /**
  * 공 하나를 한 스텝 적분한다: 중력 + 부력(잠긴 부피 기반) + 물속 저항,
- * 벽/바닥 충돌, 그리고 잠긴 부피의 변화량을 물 높이장에 소스로 되먹임한다.
+ * 벽/바닥 충돌, 그리고 잠긴 부피의 변화량을 물 높이장에 소스로 되먹인다.
+ * 물에 처음 부딪히는 순간에는 질량*속도(운동량)에 비례하는 충격파를 추가로
+ * 주입하고, `onSplash`로 그 세기를 알려 소리 효과와 연결할 수 있게 한다.
  */
-export function stepBody(body: BallBody, dt: number, solver: WaveSolver, accelX: number, accelZ: number) {
+export function stepBody(
+  body: BallBody,
+  dt: number,
+  solver: WaveSolver,
+  accelX: number,
+  accelZ: number,
+  onSplash?: (type: BallType, intensity: number) => void,
+) {
   const waterY = solver.sampleHeight(body.position.x, body.position.z)
   body.waterY = waterY
   const bottomY = body.position.y - body.radius
   const submergedHeight = Math.min(Math.max(waterY - bottomY, 0), 2 * body.radius)
   const submergedVolume = sphereCapVolume(body.radius, submergedHeight)
   const submergedFraction = submergedVolume / body.volume
+
+  const isWet = submergedVolume > 1e-9
+  if (isWet && !body.wasWet) {
+    const impactSpeed = Math.abs(body.velocity.y)
+    if (impactSpeed > SPLASH_MIN_IMPACT_SPEED) {
+      const momentum = body.mass * impactSpeed
+      const intensity = Math.min(1, momentum / SPLASH_REFERENCE_MOMENTUM)
+      const impactBoost = Math.min(body.volume * 4, SPLASH_IMPACT_VOLUME_COEFF * momentum)
+      solver.addVolumeSource(body.position.x, body.position.z, body.radius * 3.2, impactBoost)
+      onSplash?.(body.type, intensity)
+    }
+  }
+  body.wasWet = isWet
 
   const buoyancyAccel = (WATER_DENSITY * SIM_GRAVITY * submergedVolume) / body.mass
   body.velocity.y += (-SIM_GRAVITY + buoyancyAccel) * dt

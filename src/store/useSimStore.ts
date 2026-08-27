@@ -1,6 +1,8 @@
 import { create } from 'zustand'
+import type { BallType } from '../physics/toyTypes'
+import { MAX_BALLS_PER_TYPE } from '../labLayout'
 
-export type BallType = 'wood' | 'iron'
+export type { BallType }
 
 export interface BallSpec {
   id: number
@@ -27,6 +29,11 @@ export const useSimStore = create<SimState>((set) => ({
 
   togglePlaying: () => set((s) => ({ isRunning: !s.isRunning })),
   reset: () => set((s) => ({ resetSignal: s.resetSignal + 1, isRunning: true, balls: [] })),
-  dropBall: (type) => set((s) => ({ balls: [...s.balls, { id: nextBallId++, type }] })),
+  dropBall: (type) =>
+    set((s) => {
+      const countOfType = s.balls.reduce((n, b) => (b.type === type ? n + 1 : n), 0)
+      if (countOfType >= MAX_BALLS_PER_TYPE) return s
+      return { balls: [...s.balls, { id: nextBallId++, type }] }
+    }),
   clearBalls: () => set({ balls: [] }),
 }))

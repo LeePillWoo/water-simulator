@@ -25,3 +25,4 @@ export const TILT_DAMPING = 14
 // 물체 낙하 (부력/충격 물리)
 export const WATER_DENSITY = 1000 // kg/m^3
 export const BALL_DROP_HEIGHT = FLOOR_Y + TANK_WALL_HEIGHT + 0.6
+export const MAX_BALLS_PER_TYPE = 50
