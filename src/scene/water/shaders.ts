@@ -72,7 +72,7 @@ void main() {
   // 배경(굴절) 샘플이 화면상 엉뚱하게 먼 곳까지 튀지 않도록, 오프셋 자체의
   // 크기를 한 번 더 눌러 막는다 — 그 결과 물체가 그 자리에 유령처럼 겹쳐
   // 보이는 굴절 왜곡을 막는다.
-  vec2 refractOffset = clamp(N.xy * uRefractionStrength, -0.02, 0.02);
+  vec2 refractOffset = clamp(N.xy * uRefractionStrength, -0.012, 0.012);
   vec2 refractedUV = clamp(uv + refractOffset, 0.0, 1.0);
   vec3 refracted = texture2D(tBackground, refractedUV).rgb;
 
