@@ -140,7 +140,7 @@ export function stepBody(
   // 물에 떠 있는 오리/배는 진짜 오리처럼 스스로 방향을 천천히 바꿔가며
   // 유영한다: 진행각을 작은 랜덤워크로 부드럽게 굽이치게 하고, 벽에 가까워지면
   // 중심 쪽으로 미리 방향을 틀어 자연스럽게 피해 다니게 한다.
-  if (TOY_DEFS[body.type].canWander && submergedFraction > 0.15) {
+  if (TOY_DEFS[body.type].canWander && submergedFraction > 0.02) {
     body.heading += (Math.random() * 2 - 1) * WANDER_TURN_RATE * dt
 
     const halfWWander = TANK_WIDTH / 2 - body.radius

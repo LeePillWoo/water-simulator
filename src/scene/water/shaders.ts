@@ -68,7 +68,12 @@ void main() {
   vec3 V = normalize(vViewPosition);
 
   vec2 uv = gl_FragCoord.xy / uResolution;
-  vec2 refractedUV = clamp(uv + N.xy * uRefractionStrength, 0.0, 1.0);
+  // 떠 있는 물체가 유영하며 만드는 국소적인 웨이크(급격한 노멀 변화) 근처에서
+  // 배경(굴절) 샘플이 화면상 엉뚱하게 먼 곳까지 튀지 않도록, 오프셋 자체의
+  // 크기를 한 번 더 눌러 막는다 — 그 결과 물체가 그 자리에 유령처럼 겹쳐
+  // 보이는 굴절 왜곡을 막는다.
+  vec2 refractOffset = clamp(N.xy * uRefractionStrength, -0.02, 0.02);
+  vec2 refractedUV = clamp(uv + refractOffset, 0.0, 1.0);
   vec3 refracted = texture2D(tBackground, refractedUV).rgb;
 
   float fresnel = pow(1.0 - max(dot(N, V), 0.0), uFresnelPower);
@@ -93,23 +98,26 @@ void main() {
   float spec = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 70.0) * 0.5;
   color += vec3(1.0, 0.97, 0.9) * spec;
 
-  // 햇빛 아래 물결이 일렁이며 반짝이는 윤슬. 딱딱한 점을 무작위로 켰다 끄는
-  // 대신, 서로 다른 축척·방향으로 흘러가는 두 겹의 값 노이즈를 곱해 경계가
-  // 부드러운 유기적인 반짝임 무늬를 만든다 — 물결을 따라 이어지는 결처럼
-  // 보이도록. 저주파 노이즈로 큰 뭉게구름 같은 구역(클러스터)을 한 번 더
-  // 씌워, 반짝임이 표면 전체가 아니라 자연스러운 무리로 나타나게 한다.
+  // 햇빛 아래 물결이 일렁이며 반짝이는 윤슬. 독립적으로 떠다니는 노이즈
+  // 텍스처가 아니라, 시뮬레이션이 실제로 계산한 물결 노멀(N) 위에 아주 작은
+  // 잔물결 디테일만 살짝 얹어서 스펙큘러를 한 번 더 계산한다 — 그러면
+  // 반짝임이 실제 파도가 기울어지고 움직이는 방향을 그대로 따라가며 자연스럽게
+  // 흐른다. 큰 뭉게구름 같은 저주파 구역(클러스터)으로 한 번 더 걸러서,
+  // 표면 전체가 아니라 무리 지어 나타나게 한다.
   vec2 clusterDrift = vec2(uTime * 0.05, uTime * 0.035);
   float cluster = valueNoise(vWorldPosition.xz * 1.8 + clusterDrift) * 0.6 + valueNoise(vWorldPosition.xz * 4.0 - clusterDrift * 1.7) * 0.4;
   cluster = smoothstep(0.4, 0.72, cluster);
 
-  vec2 shimmerDriftA = vec2(uTime * 0.11, -uTime * 0.07);
-  vec2 shimmerDriftB = vec2(-uTime * 0.08, uTime * 0.13);
-  float shimmerA = valueNoise(vWorldPosition.xz * 14.0 + shimmerDriftA);
-  float shimmerB = valueNoise(vWorldPosition.xz * 23.0 + shimmerDriftB);
-  float shimmer = pow(clamp(shimmerA * shimmerB * 1.9 - 0.35, 0.0, 1.0), 2.5);
+  vec2 rippleUV = vWorldPosition.xz * 10.0 + vec2(uTime * 0.05, uTime * 0.035);
+  float rippleC = valueNoise(rippleUV);
+  float rippleX = valueNoise(rippleUV + vec2(0.04, 0.0));
+  float rippleZ = valueNoise(rippleUV + vec2(0.0, 0.04));
+  vec2 detailSlope = vec2(rippleC - rippleX, rippleC - rippleZ) * 3.5;
+  vec3 detailNormal = normalize(vec3(-detailSlope.x, 1.0, -detailSlope.y));
+  vec3 sparkleN = normalize(mix(N, detailNormal, 0.4));
 
-  float sparkleFalloff = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 5.0);
-  color += vec3(1.0, 0.98, 0.9) * shimmer * cluster * sparkleFalloff * 2.8;
+  float sparkleSpec = pow(max(dot(reflect(-uLightDirView, sparkleN), V), 0.0), 42.0);
+  color += vec3(1.0, 0.98, 0.9) * sparkleSpec * cluster * 1.6;
 
   // 벽 위로 넘친 지점은 흰 거품이 살짝 스치듯 밝아졌다 식는다.
   color += vec3(0.9, 0.95, 1.0) * vOverflow * 0.5;
