@@ -6,7 +6,13 @@ import { useSimStore } from '../../store/useSimStore'
 import { waterFieldState } from './waterFieldState'
 import { tiltState } from './tiltState'
 import { getOrCreateBody, stepBody, resetBodies, pruneBodies } from '../../physics/ballBody'
-import { getOrCreateBallMaterials, pruneBallMaterials, disposeAllBallMaterials } from '../../physics/ballMaterial'
+import {
+  getOrCreateBallMaterials,
+  pruneBallMaterials,
+  disposeAllBallMaterials,
+  TOY_OUTLINE_MATERIAL,
+  TOY_OUTLINE_THICKNESS,
+} from '../../physics/ballMaterial'
 import { TOY_DEFS, type BallType } from '../../physics/toyTypes'
 import { playSplash } from '../../audio/soundEngine'
 import { SIM_GRAVITY } from '../../labLayout'
@@ -79,7 +85,7 @@ export function FloatingBodies() {
 
 interface ToyGroupProps {
   type: BallType
-  materials: THREE.MeshStandardMaterial[]
+  materials: THREE.MeshToonMaterial[]
   groupRef: (g: Group | null) => void
 }
 
@@ -89,10 +95,25 @@ function ToyGroup({ type, materials, groupRef }: ToyGroupProps) {
     () => parts.map((p): [number, number, number] => [p.radius * p.scale[0], p.radius * p.scale[1], p.radius * p.scale[2]]),
     [parts],
   )
+  const outlineScales = useMemo(
+    () =>
+      scales.map(
+        (s): [number, number, number] => [
+          s[0] + TOY_OUTLINE_THICKNESS,
+          s[1] + TOY_OUTLINE_THICKNESS,
+          s[2] + TOY_OUTLINE_THICKNESS,
+        ],
+      ),
+    [scales],
+  )
   return (
     <group ref={groupRef}>
       {parts.map((part, i) => (
         <mesh key={i} position={part.position} scale={scales[i]} geometry={UNIT_SPHERE} material={materials[i]} castShadow receiveShadow />
+      ))}
+      {/* 카툰 스타일의 검은 윤곽선: 뒤집힌(BackSide) 살짝 큰 껍질을 겹쳐 실루엣 가장자리만 비어져 나오게 한다. */}
+      {parts.map((part, i) => (
+        <mesh key={`outline-${i}`} position={part.position} scale={outlineScales[i]} geometry={UNIT_SPHERE} material={TOY_OUTLINE_MATERIAL} />
       ))}
     </group>
   )
