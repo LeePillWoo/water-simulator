@@ -1,18 +1,20 @@
-// 실험실 씬 전체가 공유하는 치수 상수 (렌더링과 물리 콜라이더가 동일한 값을 참조한다)
+// 수조 씬 전체가 공유하는 치수/물리 상수 (렌더링과 파동 시뮬레이션이 동일한 값을 참조한다)
 
-export const Z_MIN = -2.5
-export const Z_MAX = 2.5
-export const WALL_THK = 0.15
-export const GATE_HEIGHT = 2.0
+export const TANK_WIDTH = 3.2
+export const TANK_DEPTH = 3.2
+export const TANK_WALL_HEIGHT = 1.6
+export const WALL_THK = 0.05
+export const FLOOR_Y = 0
 
-export const TIER1 = { xMin: 1.0, xMax: 5.0, y: 6.0, gateHeight: GATE_HEIGHT }
-export const TIER2 = { xMin: -2.0, xMax: 1.0, y: 3.0, gateHeight: GATE_HEIGHT }
-export const FLOOR = { xMin: -6.0, xMax: -2.0, y: 0.0, wallHeight: 2.0 }
+// 파동 시뮬레이션 (얕은물 방정식)
+export const REST_WATER_DEPTH = 0.6 // H0, 정지 수심
+export const GRID_RES = 64 // 그리드 한 변 셀 수
+export const SIM_GRAVITY = 9.8
+export const WAVE_DAMPING = 0.6 // 속도 감쇠 (1/s)
+export const HEIGHT_SMOOTH = 0.02 // 그리드 스케일 수치 노이즈 억제용 스무딩 계수
 
-export const TIER1_WALL_TOP = TIER1.y + TIER1.gateHeight
-export const TIER2_WALL_TOP = TIER2.y + TIER2.gateHeight
-export const FLOOR_WALL_TOP = FLOOR.y + FLOOR.wallHeight
-
-// 물 배수 처리 기준
-export const DRAIN_X = FLOOR.xMin - 0.4
-export const DRAIN_Y = -3
+// 수조 기울이기 (마우스 흔들기)
+export const MAX_TILT_RAD = (22 * Math.PI) / 180
+export const DRAG_PIXELS_FOR_MAX_TILT = 220
+export const TILT_STIFFNESS = 90
+export const TILT_DAMPING = 14

@@ -1,0 +1,166 @@
+import { GRID_RES, TANK_WIDTH, TANK_DEPTH, REST_WATER_DEPTH, SIM_GRAVITY, WAVE_DAMPING, HEIGHT_SMOOTH } from '../labLayout'
+
+const N = GRID_RES
+const STRIDE = N + 1
+const SIZE = STRIDE * STRIDE
+const DX = TANK_WIDTH / N
+const DZ = TANK_DEPTH / N
+const WAVE_SPEED = Math.sqrt(SIM_GRAVITY * REST_WATER_DEPTH)
+const MAX_SUBSTEP_DT = Math.min(DX, DZ) / (WAVE_SPEED * Math.SQRT2)
+const MAX_DT = 1 / 30
+
+/**
+ * CPU shallow-water solver (linearized): height field `h` plus horizontal
+ * velocity field `(u, v)`, all co-located on an (N+1)x(N+1) grid over the
+ * tank footprint. Runs on CPU (not a GPU ping-pong texture) so that future
+ * buoyancy physics can read `sampleHeight` synchronously every physics step.
+ */
+export class WaveSolver {
+  readonly n = N
+  readonly dx = DX
+  readonly dz = DZ
+
+  h = new Float32Array(SIZE)
+  u = new Float32Array(SIZE)
+  v = new Float32Array(SIZE)
+  normals = new Float32Array(SIZE * 3)
+
+  private h2 = new Float32Array(SIZE)
+  private u2 = new Float32Array(SIZE)
+  private v2 = new Float32Array(SIZE)
+
+  constructor() {
+    this.computeNormals()
+  }
+
+  reset() {
+    this.h.fill(0)
+    this.u.fill(0)
+    this.v.fill(0)
+    this.computeNormals()
+  }
+
+  step(dt: number, accelX: number, accelZ: number) {
+    const clamped = Math.min(dt, MAX_DT)
+    if (clamped <= 0) return
+    const substeps = Math.max(1, Math.ceil(clamped / MAX_SUBSTEP_DT))
+    const sub = clamped / substeps
+    for (let s = 0; s < substeps; s++) this.substep(sub, accelX, accelZ)
+    this.computeNormals()
+  }
+
+  sampleHeight(worldX: number, worldZ: number): number {
+    const gx = (worldX + TANK_WIDTH / 2) / DX
+    const gz = (worldZ + TANK_DEPTH / 2) / DZ
+    const i0 = Math.max(0, Math.min(N - 1, Math.floor(gx)))
+    const j0 = Math.max(0, Math.min(N - 1, Math.floor(gz)))
+    const fx = Math.min(1, Math.max(0, gx - i0))
+    const fz = Math.min(1, Math.max(0, gz - j0))
+    const idx00 = j0 * STRIDE + i0
+    const idx10 = idx00 + 1
+    const idx01 = idx00 + STRIDE
+    const idx11 = idx01 + 1
+    const { h } = this
+    const a = h[idx00] * (1 - fx) + h[idx10] * fx
+    const b = h[idx01] * (1 - fx) + h[idx11] * fx
+    return REST_WATER_DEPTH + (a * (1 - fz) + b * fz)
+  }
+
+  private substep(dt: number, accelX: number, accelZ: number) {
+    const { h, u, v, h2, u2, v2 } = this
+    const invDx2 = 1 / (2 * DX)
+    const invDz2 = 1 / (2 * DZ)
+    const dampMul = Math.max(0, 1 - WAVE_DAMPING * dt)
+
+    for (let j = 1; j < N; j++) {
+      const row = j * STRIDE
+      for (let i = 1; i < N; i++) {
+        const idx = row + i
+        const dhdx = (h[idx + 1] - h[idx - 1]) * invDx2
+        const dhdz = (h[idx + STRIDE] - h[idx - STRIDE]) * invDz2
+        u2[idx] = (u[idx] + dt * (-SIM_GRAVITY * dhdx + accelX)) * dampMul
+        v2[idx] = (v[idx] + dt * (-SIM_GRAVITY * dhdz + accelZ)) * dampMul
+      }
+    }
+    applyVelocityBoundary(u2, v2)
+
+    for (let j = 1; j < N; j++) {
+      const row = j * STRIDE
+      for (let i = 1; i < N; i++) {
+        const idx = row + i
+        const dudx = (u2[idx + 1] - u2[idx - 1]) * invDx2
+        const dvdz = (v2[idx + STRIDE] - v2[idx - STRIDE]) * invDz2
+        h2[idx] = h[idx] - dt * REST_WATER_DEPTH * (dudx + dvdz)
+      }
+    }
+    applyHeightBoundary(h2)
+    if (HEIGHT_SMOOTH > 0) smoothHeight(h2)
+
+    this.h = h2
+    this.h2 = h
+    this.u = u2
+    this.u2 = u
+    this.v = v2
+    this.v2 = v
+  }
+
+  private computeNormals() {
+    const { h, normals } = this
+    for (let j = 0; j <= N; j++) {
+      const row = j * STRIDE
+      const jDown = j > 0 ? row - STRIDE : row
+      const jUp = j < N ? row + STRIDE : row
+      const dzScale = j > 0 && j < N ? 1 / (2 * DZ) : 1 / DZ
+      for (let i = 0; i <= N; i++) {
+        const idx = row + i
+        const iLeft = i > 0 ? idx - 1 : idx
+        const iRight = i < N ? idx + 1 : idx
+        const dxScale = i > 0 && i < N ? 1 / (2 * DX) : 1 / DX
+        const dhdx = (h[iRight] - h[iLeft]) * dxScale
+        const dhdz = (h[jUp + i] - h[jDown + i]) * dzScale
+        const nx = -dhdx
+        const ny = 1
+        const nz = -dhdz
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz)
+        const o = idx * 3
+        normals[o] = nx / len
+        normals[o + 1] = ny / len
+        normals[o + 2] = nz / len
+      }
+    }
+  }
+}
+
+function applyVelocityBoundary(u2: Float32Array, v2: Float32Array) {
+  for (let j = 0; j <= N; j++) {
+    u2[j * STRIDE] = 0
+    u2[j * STRIDE + N] = 0
+  }
+  for (let i = 0; i <= N; i++) {
+    v2[i] = 0
+    v2[N * STRIDE + i] = 0
+  }
+}
+
+function applyHeightBoundary(h2: Float32Array) {
+  for (let j = 0; j <= N; j++) {
+    const row = j * STRIDE
+    h2[row] = h2[row + 1]
+    h2[row + N] = h2[row + N - 1]
+  }
+  for (let i = 0; i <= N; i++) {
+    h2[i] = h2[STRIDE + i]
+    h2[N * STRIDE + i] = h2[(N - 1) * STRIDE + i]
+  }
+}
+
+function smoothHeight(h2: Float32Array) {
+  for (let j = 1; j < N; j++) {
+    const row = j * STRIDE
+    for (let i = 1; i < N; i++) {
+      const idx = row + i
+      const avg = (h2[idx - 1] + h2[idx + 1] + h2[idx - STRIDE] + h2[idx + STRIDE]) * 0.25
+      h2[idx] = h2[idx] * (1 - HEIGHT_SMOOTH) + avg * HEIGHT_SMOOTH
+    }
+  }
+}

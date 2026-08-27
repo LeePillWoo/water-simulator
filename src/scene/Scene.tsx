@@ -1,20 +1,29 @@
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { MOUSE } from 'three'
 import { Lab } from './Lab'
-import { DamStructure } from './DamStructure'
-import { Obstacles } from './Obstacles'
-import { FluidSurface } from './fluid/FluidSurface'
+import { TankStructure } from './water/TankStructure'
+import { WaterSurface } from './water/WaterSurface'
+import { TiltRig } from './water/TiltRig'
+import { EnvMapBaker } from './water/EnvMapBaker'
 
 export function Scene() {
   return (
     <>
       <color attach="background" args={['#12151a']} />
-      <fog attach="fog" args={['#12151a', 18, 40]} />
-      <PerspectiveCamera makeDefault position={[2, 11, 15]} fov={45} />
-      <OrbitControls target={[-1, 3, 0]} maxDistance={30} minDistance={4} />
+      <fog attach="fog" args={['#12151a', 10, 24]} />
+      <PerspectiveCamera makeDefault position={[3, 3.2, 4.5]} fov={45} />
+      <OrbitControls
+        target={[0, 0.7, 0]}
+        minDistance={2}
+        maxDistance={12}
+        mouseButtons={{ MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }}
+      />
       <Lab />
-      <DamStructure />
-      <Obstacles />
-      <FluidSurface />
+      <EnvMapBaker />
+      <TiltRig>
+        <TankStructure />
+        <WaterSurface />
+      </TiltRig>
     </>
   )
 }
