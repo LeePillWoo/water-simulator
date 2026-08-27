@@ -1,4 +1,3 @@
-import { Grid } from '@react-three/drei'
 import { FLOOR_Y } from '../labLayout'
 
 export function Lab() {
@@ -12,15 +11,6 @@ export function Lab() {
         <planeGeometry args={[6, 6]} />
         <meshStandardMaterial color="#2a2f38" roughness={0.95} />
       </mesh>
-      <Grid
-        position={[0, FLOOR_Y - 0.5, 0]}
-        args={[6, 6]}
-        cellSize={0.25}
-        cellColor="#3a4250"
-        sectionColor="#4d5867"
-        fadeDistance={14}
-        infiniteGrid={false}
-      />
     </group>
   )
 }

@@ -12,6 +12,7 @@ body,
   background: #12151a;
   font-family: 'Segoe UI', system-ui, sans-serif;
   color: #e8ecf1;
+  overscroll-behavior: none;
 }
 
 .app {
@@ -19,16 +20,19 @@ body,
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  touch-action: none;
 }
 
 .app canvas {
   display: block;
+  touch-action: none;
 }
 
 .ui-overlay {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -41,12 +45,44 @@ body,
 }
 
 .panel {
-  width: 280px;
+  width: min(280px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   background: rgba(20, 24, 30, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 14px 16px;
   backdrop-filter: blur(6px);
+}
+
+@media (max-width: 420px) {
+  .panel {
+    padding: 12px 14px;
+  }
+
+  .panel h1 {
+    font-size: 14px;
+  }
+}
+
+/* 세로 공간이 빠듯한 화면(모바일 세로 모드 등)에서는 설명 문구를 접어 패널
+   높이를 줄이고, 여백도 함께 좁혀 탱크가 보이는 영역을 최대한 확보한다. */
+@media (max-height: 720px) {
+  .hint {
+    display: none;
+  }
+
+  .panel h1 {
+    margin-bottom: 8px;
+  }
+
+  .panel h2 {
+    margin-top: 2px;
+  }
+
+  .button-row {
+    margin-bottom: 6px;
+  }
 }
 
 .panel h1 {
@@ -125,4 +161,20 @@ button.active {
 button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.btn-sub {
+  display: block;
+  font-size: 0.78em;
+  font-weight: 400;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+/* 터치 기기에서는 손가락으로 누르기 편하도록 버튼을 더 넉넉하게 잡는다. */
+@media (pointer: coarse) {
+  button {
+    padding: 9px 10px;
+    font-size: 13px;
+  }
 }

@@ -1,23 +1,27 @@
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { MOUSE } from 'three'
+import { MOUSE, TOUCH } from 'three'
 import { Lab } from './Lab'
 import { TankStructure } from './water/TankStructure'
 import { WaterSurface } from './water/WaterSurface'
 import { FloatingBodies } from './water/FloatingBodies'
 import { TiltRig } from './water/TiltRig'
 import { EnvMapBaker } from './water/EnvMapBaker'
+import { ResponsiveCamera } from './ResponsiveCamera'
 
 export function Scene() {
   return (
     <>
       <color attach="background" args={['#12151a']} />
       <fog attach="fog" args={['#12151a', 10, 24]} />
-      <PerspectiveCamera makeDefault position={[3, 3.2, 4.5]} fov={45} />
+      <PerspectiveCamera makeDefault fov={45} />
+      <ResponsiveCamera />
       <OrbitControls
+        makeDefault
         target={[0, 0.7, 0]}
         minDistance={2}
-        maxDistance={12}
+        maxDistance={14}
         mouseButtons={{ MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }}
+        touches={{ TWO: TOUCH.DOLLY_ROTATE }}
       />
       <Lab />
       <EnvMapBaker />
