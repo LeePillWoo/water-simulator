@@ -3,7 +3,7 @@ import { TOY_DEFS } from '../physics/toyTypes'
 import { MAX_BALLS_PER_TYPE } from '../labLayout'
 import { playClick } from '../audio/soundEngine'
 
-const TOY_ORDER: BallType[] = ['wood', 'iron', 'boat', 'duck', 'bear', 'dino']
+const TOY_ORDER: BallType[] = ['wood', 'iron', 'boat', 'duck']
 
 export function ControlPanel() {
   const isRunning = useSimStore((s) => s.isRunning)

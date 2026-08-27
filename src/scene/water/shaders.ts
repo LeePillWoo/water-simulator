@@ -93,20 +93,23 @@ void main() {
   float spec = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 70.0) * 0.5;
   color += vec3(1.0, 0.97, 0.9) * spec;
 
-  // 햇빛 아래 물결이 반짝이는 스파클. 점을 화면 전체에 고르게 흩뿌리면 별처럼
-  // 인공적으로 보이므로, 저주파 값 노이즈로 "반짝임이 뭉치는 구역(클러스터)"을
-  // 먼저 만들고, 그 구역 안에서만 확률적으로 반짝이는 점이 뜨게 한다. 클러스터
-  // 자체도 시간에 따라 천천히 흘러가 실제 윤슬처럼 자연스럽게 움직인다.
-  vec2 drift = vec2(uTime * 0.05, uTime * 0.035);
-  float cluster = valueNoise(vWorldPosition.xz * 1.8 + drift) * 0.6 + valueNoise(vWorldPosition.xz * 4.0 - drift * 1.7) * 0.4;
-  cluster = smoothstep(0.42, 0.72, cluster);
+  // 햇빛 아래 물결이 일렁이며 반짝이는 윤슬. 딱딱한 점을 무작위로 켰다 끄는
+  // 대신, 서로 다른 축척·방향으로 흘러가는 두 겹의 값 노이즈를 곱해 경계가
+  // 부드러운 유기적인 반짝임 무늬를 만든다 — 물결을 따라 이어지는 결처럼
+  // 보이도록. 저주파 노이즈로 큰 뭉게구름 같은 구역(클러스터)을 한 번 더
+  // 씌워, 반짝임이 표면 전체가 아니라 자연스러운 무리로 나타나게 한다.
+  vec2 clusterDrift = vec2(uTime * 0.05, uTime * 0.035);
+  float cluster = valueNoise(vWorldPosition.xz * 1.8 + clusterDrift) * 0.6 + valueNoise(vWorldPosition.xz * 4.0 - clusterDrift * 1.7) * 0.4;
+  cluster = smoothstep(0.4, 0.72, cluster);
 
-  vec2 sparkleCell = floor(vWorldPosition.xz * 70.0);
-  float sparkleFlicker = hash21(sparkleCell + floor(uTime * 5.0));
-  float sparkleThreshold = mix(0.997, 0.93, cluster);
-  float sparkleOn = step(sparkleThreshold, hash21(sparkleCell)) * step(0.5, sparkleFlicker);
-  float sparkleFalloff = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 6.0);
-  color += vec3(1.0, 0.98, 0.92) * sparkleOn * sparkleFalloff * cluster * 3.0;
+  vec2 shimmerDriftA = vec2(uTime * 0.11, -uTime * 0.07);
+  vec2 shimmerDriftB = vec2(-uTime * 0.08, uTime * 0.13);
+  float shimmerA = valueNoise(vWorldPosition.xz * 14.0 + shimmerDriftA);
+  float shimmerB = valueNoise(vWorldPosition.xz * 23.0 + shimmerDriftB);
+  float shimmer = pow(clamp(shimmerA * shimmerB * 1.9 - 0.35, 0.0, 1.0), 2.5);
+
+  float sparkleFalloff = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 5.0);
+  color += vec3(1.0, 0.98, 0.9) * shimmer * cluster * sparkleFalloff * 2.8;
 
   // 벽 위로 넘친 지점은 흰 거품이 살짝 스치듯 밝아졌다 식는다.
   color += vec3(0.9, 0.95, 1.0) * vOverflow * 0.5;

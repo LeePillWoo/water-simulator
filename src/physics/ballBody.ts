@@ -18,6 +18,8 @@ export interface BallBody {
   waterY: number
   /** 물에 잠겨 있는 중인지 — 진입 순간(첫 접촉)을 감지해 충격 스플래시를 한 번만 터뜨리는 데 쓴다. */
   wasWet: boolean
+  /** 유영 가능한 장난감(오리/배)의 현재 진행 방향(라디안). 렌더링에서 그대로 회전값으로 쓴다. */
+  heading: number
 }
 
 const bodies = new Map<number, BallBody>()
@@ -67,6 +69,7 @@ export function getOrCreateBody(spec: BallSpec): BallBody {
     prevSubmergedVolume: 0,
     waterY: 0,
     wasWet: false,
+    heading: Math.random() * Math.PI * 2,
   }
   bodies.set(spec.id, body)
   return body
@@ -77,6 +80,16 @@ export function getOrCreateBody(spec: BallSpec): BallBody {
 const SPLASH_REFERENCE_MOMENTUM = 180
 const SPLASH_IMPACT_VOLUME_COEFF = 0.00006
 const SPLASH_MIN_IMPACT_SPEED = 0.15
+
+// 오리/배가 실제 오리처럼 수면을 유영해 다니게 하는 값들.
+// 뜬 물체는 잠긴 부피가 작아 물속 저항(dragRate)이 커서, 추진력 대부분이
+// 감쇠에 먹혀 평형속도(thrust/dragRate)가 매우 낮게 잡힌다 — 눈에 띄게
+// 돌아다니려면 감쇠를 이기고도 남을 만큼 추진력을 넉넉히 줘야 한다.
+const WANDER_TURN_RATE = 0.45 // 방향이 무작위로 꺾이는 최대 각속도(rad/s) — 랜덤워크라 부드럽게 곡선을 그린다
+const WANDER_THRUST = 0.16 // 진행 방향으로 미는 가속도(m/s^2)
+const WANDER_MAX_SPEED = 0.22 // 수평 속도 상한(m/s) — 느긋하게 순항하는 속도
+const WALL_AVOID_MARGIN = 0.4 // 벽에서 이 거리 안으로 들어오면 중심 쪽으로 방향을 틀기 시작
+const WALL_AVOID_TURN_RATE = 2.5 // 벽 회피 조향의 세기
 
 /**
  * 공 하나를 한 스텝 적분한다: 중력 + 부력(잠긴 부피 기반) + 물속 저항,
@@ -123,6 +136,36 @@ export function stepBody(
   const dragRate = 0.05 + submergedFraction * 16
   const damping = Math.exp(-dt * dragRate)
   body.velocity.multiplyScalar(damping)
+
+  // 물에 떠 있는 오리/배는 진짜 오리처럼 스스로 방향을 천천히 바꿔가며
+  // 유영한다: 진행각을 작은 랜덤워크로 부드럽게 굽이치게 하고, 벽에 가까워지면
+  // 중심 쪽으로 미리 방향을 틀어 자연스럽게 피해 다니게 한다.
+  if (TOY_DEFS[body.type].canWander && submergedFraction > 0.15) {
+    body.heading += (Math.random() * 2 - 1) * WANDER_TURN_RATE * dt
+
+    const halfWWander = TANK_WIDTH / 2 - body.radius
+    const halfDWander = TANK_DEPTH / 2 - body.radius
+    const marginX = halfWWander - Math.abs(body.position.x)
+    const marginZ = halfDWander - Math.abs(body.position.z)
+    const nearestMargin = Math.min(marginX, marginZ)
+    if (nearestMargin < WALL_AVOID_MARGIN) {
+      const avoidStrength = 1 - Math.max(0, nearestMargin) / WALL_AVOID_MARGIN
+      const towardCenter = Math.atan2(-body.position.z, -body.position.x)
+      let diff = towardCenter - body.heading
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff))
+      body.heading += diff * avoidStrength * WALL_AVOID_TURN_RATE * dt
+    }
+
+    body.velocity.x += Math.cos(body.heading) * WANDER_THRUST * dt
+    body.velocity.z += Math.sin(body.heading) * WANDER_THRUST * dt
+
+    const horizSpeed = Math.hypot(body.velocity.x, body.velocity.z)
+    if (horizSpeed > WANDER_MAX_SPEED) {
+      const scale = WANDER_MAX_SPEED / horizSpeed
+      body.velocity.x *= scale
+      body.velocity.z *= scale
+    }
+  }
 
   body.position.addScaledVector(body.velocity, dt)
 

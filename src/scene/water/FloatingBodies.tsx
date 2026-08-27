@@ -56,6 +56,9 @@ export function FloatingBodies() {
       stepBody(body, dt, solver, accelX, accelZ, (_type, intensity) => playSplash(intensity))
       const group = groupRefs.current.get(spec.id)
       group?.position.copy(body.position)
+      // 장난감의 로컬 +X를 정면으로 두고 설계했으므로, 진행각(heading)을 그대로
+      // -Y회전으로 반영하면 오리/배가 실제로 나아가는 방향을 바라보게 된다.
+      if (group) group.rotation.y = -body.heading
       const { bodyUniforms } = getOrCreateBallMaterials(spec)
       bodyUniforms.uWaterY.value = body.waterY
       bodyUniforms.uBallCenter.value.copy(body.position)
@@ -70,7 +73,9 @@ export function FloatingBodies() {
           groupRef={(g) => {
             if (g) {
               groupRefs.current.set(spec.id, g)
-              g.position.copy(getOrCreateBody(spec).position)
+              const body = getOrCreateBody(spec)
+              g.position.copy(body.position)
+              g.rotation.y = -body.heading
             } else {
               groupRefs.current.delete(spec.id)
             }
