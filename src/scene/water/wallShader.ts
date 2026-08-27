@@ -48,8 +48,11 @@ void main() {
   vec3 viewDir = normalize(cameraPosition - vWorldPosition);
   float fresnel = pow(1.0 - max(dot(normalize(vWorldNormal), viewDir), 0.0), 2.5);
 
+  // 톤 셰이딩: 부드러운 그라디언트 대신 3단계로 뚝뚝 끊어 물빛을 표현한다.
+  // 가장 가까운 단계로 반올림해 옅은 수심에서도 색이 사라지지 않게 한다.
   float absorbFactor = clamp(depthBelow * uAbsorption, 0.0, 1.0);
-  vec3 waterTint = mix(uShallowColor, uDeepColor, absorbFactor);
+  float bandedAbsorb = floor(absorbFactor * 3.0 + 0.5) / 2.0;
+  vec3 waterTint = mix(uShallowColor, uDeepColor, bandedAbsorb);
 
   // 진짜 굴절 대신, 깊이에 따라 색과 밝기를 살짝 흔들어 물이 일렁이는 느낌을 낸다.
   float shimmer = sin(vTankLocalPos.x * 18.0 + uTime * 1.6) * sin(vTankLocalPos.y * 22.0 - uTime * 1.1);

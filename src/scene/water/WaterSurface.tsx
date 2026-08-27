@@ -8,6 +8,7 @@ import { envMapState } from './envMap'
 import { waterFieldState } from './waterFieldState'
 import { createHeightFieldTexture } from './heightFieldTexture'
 import { waterVertexShader, waterFragmentShader } from './shaders'
+import { SUN_DIRECTION } from './sunLight'
 import { GRID_RES, TANK_WIDTH, TANK_DEPTH, REST_WATER_DEPTH, SIM_GRAVITY, SHORE_FADE_RANGE } from '../../labLayout'
 
 const N = GRID_RES
@@ -15,7 +16,6 @@ const STRIDE = N + 1
 const SIZE = STRIDE * STRIDE
 const WATER_LAYER = 1
 
-const LIGHT_DIR_WORLD = new THREE.Vector3(4, 8, 4).normalize()
 const scratchLightDir = new THREE.Vector3()
 const scratchSize = new THREE.Vector2()
 
@@ -96,6 +96,7 @@ export function WaterSurface() {
           uFresnelPower: { value: 3.0 },
           uRefractionStrength: { value: 0.08 },
           uShoreFadeRange: { value: SHORE_FADE_RANGE },
+          uTime: { value: 0 },
         },
       }),
     [backgroundRT],
@@ -134,7 +135,8 @@ export function WaterSurface() {
       backgroundRT.setSize(Math.max(1, size.x), Math.max(1, size.y))
     }
     material.uniforms.uResolution.value.set(size.x, size.y)
-    scratchLightDir.copy(LIGHT_DIR_WORLD).transformDirection(camera.matrixWorldInverse)
+    material.uniforms.uTime.value = state.clock.elapsedTime
+    scratchLightDir.copy(SUN_DIRECTION).transformDirection(camera.matrixWorldInverse)
     material.uniforms.uLightDirView.value.copy(scratchLightDir)
 
     if (!material.uniforms.uHasEnvMap.value && envMapState.texture) {

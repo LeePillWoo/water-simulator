@@ -50,7 +50,7 @@ export function GlassWall({ args, position }: GlassWallProps) {
   })
 
   return (
-    <mesh position={position} material={material}>
+    <mesh position={position} material={material} receiveShadow>
       <boxGeometry args={args} />
     </mesh>
   )
