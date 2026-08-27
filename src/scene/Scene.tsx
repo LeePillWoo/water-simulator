@@ -3,6 +3,7 @@ import { MOUSE } from 'three'
 import { Lab } from './Lab'
 import { TankStructure } from './water/TankStructure'
 import { WaterSurface } from './water/WaterSurface'
+import { FloatingBodies } from './water/FloatingBodies'
 import { TiltRig } from './water/TiltRig'
 import { EnvMapBaker } from './water/EnvMapBaker'
 
@@ -23,6 +24,7 @@ export function Scene() {
       <TiltRig>
         <TankStructure />
         <WaterSurface />
+        <FloatingBodies />
       </TiltRig>
     </>
   )

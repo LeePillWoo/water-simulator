@@ -5,6 +5,7 @@ import { useSimStore } from '../../store/useSimStore'
 import { WaveSolver } from '../../physics/waveSolver'
 import { tiltState } from './tiltState'
 import { envMapState } from './envMap'
+import { waterFieldState } from './waterFieldState'
 import { waterVertexShader, waterFragmentShader } from './shaders'
 import { GRID_RES, TANK_WIDTH, TANK_DEPTH, REST_WATER_DEPTH, SIM_GRAVITY } from '../../labLayout'
 
@@ -99,6 +100,13 @@ export function WaterSurface() {
   useEffect(() => {
     solver.reset()
   }, [solver, resetSignal])
+
+  useEffect(() => {
+    waterFieldState.solver = solver
+    return () => {
+      waterFieldState.solver = null
+    }
+  }, [solver])
 
   useEffect(() => {
     return () => {

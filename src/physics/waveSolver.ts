@@ -66,6 +66,54 @@ export class WaveSolver {
     return REST_WATER_DEPTH + (a * (1 - fz) + b * fz)
   }
 
+  /**
+   * 물에 잠긴 물체의 부피 변화량(m^3)을 (worldX, worldZ) 주변에 반경 `radius`의
+   * 부드러운 커널로 뿌려 높이장에 직접 주입한다. 물체가 가라앉으며 부피가 늘면
+   * 수면이 솟아오르고, 떠오르며 부피가 줄면 수면이 가라앉아 파동으로 퍼져나간다.
+   */
+  addVolumeSource(worldX: number, worldZ: number, radius: number, volume: number) {
+    if (radius <= 0 || volume === 0) return
+    const { h } = this
+    const gx = (worldX + TANK_WIDTH / 2) / DX
+    const gz = (worldZ + TANK_DEPTH / 2) / DZ
+    const rCellsX = Math.max(1, Math.ceil(radius / DX))
+    const rCellsZ = Math.max(1, Math.ceil(radius / DZ))
+    const i0 = Math.round(gx)
+    const j0 = Math.round(gz)
+    const iMin = Math.max(0, i0 - rCellsX)
+    const iMax = Math.min(N, i0 + rCellsX)
+    const jMin = Math.max(0, j0 - rCellsZ)
+    const jMax = Math.min(N, j0 + rCellsZ)
+    const r2 = radius * radius
+
+    let totalWeight = 0
+    for (let j = jMin; j <= jMax; j++) {
+      const wz = (j - gz) * DZ
+      for (let i = iMin; i <= iMax; i++) {
+        const wx = (i - gx) * DX
+        const d2 = wx * wx + wz * wz
+        if (d2 >= r2) continue
+        const t = 1 - d2 / r2
+        totalWeight += t * t
+      }
+    }
+    if (totalWeight <= 0) return
+
+    const cellArea = DX * DZ
+    const scale = volume / (totalWeight * cellArea)
+    for (let j = jMin; j <= jMax; j++) {
+      const wz = (j - gz) * DZ
+      const row = j * STRIDE
+      for (let i = iMin; i <= iMax; i++) {
+        const wx = (i - gx) * DX
+        const d2 = wx * wx + wz * wz
+        if (d2 >= r2) continue
+        const t = 1 - d2 / r2
+        h[row + i] += t * t * scale
+      }
+    }
+  }
+
   private substep(dt: number, accelX: number, accelZ: number) {
     const { h, u, v, h2, u2, v2 } = this
     const invDx2 = 1 / (2 * DX)

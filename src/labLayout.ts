@@ -18,3 +18,7 @@ export const MAX_TILT_RAD = (22 * Math.PI) / 180
 export const DRAG_PIXELS_FOR_MAX_TILT = 220
 export const TILT_STIFFNESS = 90
 export const TILT_DAMPING = 14
+
+// 물체 낙하 (부력/충격 물리)
+export const WATER_DENSITY = 1000 // kg/m^3
+export const BALL_DROP_HEIGHT = FLOOR_Y + TANK_WALL_HEIGHT + 0.6
