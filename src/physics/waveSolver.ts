@@ -1,4 +1,13 @@
-import { GRID_RES, TANK_WIDTH, TANK_DEPTH, REST_WATER_DEPTH, SIM_GRAVITY, WAVE_DAMPING, HEIGHT_SMOOTH } from '../labLayout'
+import {
+  GRID_RES,
+  TANK_WIDTH,
+  TANK_DEPTH,
+  REST_WATER_DEPTH,
+  SIM_GRAVITY,
+  WAVE_DAMPING,
+  HEIGHT_SMOOTH,
+  MIN_WATER_DEPTH,
+} from '../labLayout'
 
 const N = GRID_RES
 const STRIDE = N + 1
@@ -8,6 +17,7 @@ const DZ = TANK_DEPTH / N
 const WAVE_SPEED = Math.sqrt(SIM_GRAVITY * REST_WATER_DEPTH)
 const MAX_SUBSTEP_DT = Math.min(DX, DZ) / (WAVE_SPEED * Math.SQRT2)
 const MAX_DT = 1 / 30
+const MIN_H = -REST_WATER_DEPTH + MIN_WATER_DEPTH
 
 /**
  * CPU shallow-water solver (linearized): height field `h` plus horizontal
@@ -143,6 +153,7 @@ export class WaveSolver {
     }
     applyHeightBoundary(h2)
     if (HEIGHT_SMOOTH > 0) smoothHeight(h2)
+    clampDryFloor(h2, u2, v2)
 
     this.h = h2
     this.h2 = h
@@ -199,6 +210,25 @@ function applyHeightBoundary(h2: Float32Array) {
   for (let i = 0; i <= N; i++) {
     h2[i] = h2[STRIDE + i]
     h2[N * STRIDE + i] = h2[(N - 1) * STRIDE + i]
+  }
+}
+
+/**
+ * 젖음-마름(wetting-drying) 경계 조건: 수조가 기울어져 수심이 0으로 수렴하는
+ * 얕은 쪽에서 수면이 바닥(y=0) 아래로 뚫고 내려가지 않도록 최소 수심으로 막는다.
+ * 막힌 칸은 계속 물을 밀어내려는 속도도 죽여서 마른 경계에서 진동이 쌓이지 않게 한다.
+ */
+function clampDryFloor(h2: Float32Array, u2: Float32Array, v2: Float32Array) {
+  for (let j = 0; j <= N; j++) {
+    const row = j * STRIDE
+    for (let i = 0; i <= N; i++) {
+      const idx = row + i
+      if (h2[idx] < MIN_H) {
+        h2[idx] = MIN_H
+        u2[idx] *= 0.2
+        v2[idx] *= 0.2
+      }
+    }
   }
 }
 

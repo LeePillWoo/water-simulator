@@ -7,7 +7,7 @@ import { tiltState } from './tiltState'
 import { envMapState } from './envMap'
 import { waterFieldState } from './waterFieldState'
 import { waterVertexShader, waterFragmentShader } from './shaders'
-import { GRID_RES, TANK_WIDTH, TANK_DEPTH, REST_WATER_DEPTH, SIM_GRAVITY } from '../../labLayout'
+import { GRID_RES, TANK_WIDTH, TANK_DEPTH, REST_WATER_DEPTH, SIM_GRAVITY, SHORE_FADE_RANGE } from '../../labLayout'
 
 const N = GRID_RES
 const STRIDE = N + 1
@@ -76,6 +76,8 @@ export function WaterSurface() {
       new THREE.ShaderMaterial({
         vertexShader: waterVertexShader,
         fragmentShader: waterFragmentShader,
+        transparent: true,
+        depthWrite: false,
         uniforms: {
           tBackground: { value: backgroundRT.texture },
           uEnvMap: { value: null },
@@ -88,6 +90,7 @@ export function WaterSurface() {
           uAbsorption: { value: 0.35 },
           uFresnelPower: { value: 3.0 },
           uRefractionStrength: { value: 0.08 },
+          uShoreFadeRange: { value: SHORE_FADE_RANGE },
         },
       }),
     [backgroundRT],

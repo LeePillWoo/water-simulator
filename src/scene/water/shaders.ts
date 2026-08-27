@@ -30,6 +30,7 @@ uniform vec3 uSkyColor;
 uniform float uAbsorption;
 uniform float uFresnelPower;
 uniform float uRefractionStrength;
+uniform float uShoreFadeRange;
 
 varying vec3 vNormal;
 varying vec3 vViewPosition;
@@ -67,6 +68,9 @@ void main() {
   float spec = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 64.0) * 0.4;
   color += vec3(spec);
 
-  gl_FragColor = vec4(color, 1.0);
+  // 기울어진 수조의 얕은 쪽 바닥이 드러나도록, 수심이 거의 0에 가까운 곳은
+  // 물이 얇은 막처럼 뜨 보이지 않게 투명도를 낮춰 바닥이 자연스럽게 비치게 한다.
+  float wet = smoothstep(0.0, uShoreFadeRange, vThickness);
+  gl_FragColor = vec4(color, wet);
 }
 `
