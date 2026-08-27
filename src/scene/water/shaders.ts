@@ -50,6 +50,19 @@ float hash21(vec2 p) {
   return fract(p.x * p.y);
 }
 
+// 격자점 사이를 부드럽게 보간하는 값 노이즈. 스파클이 균일하게 흩뿌려지지 않고
+// 뭉게구름처럼 뭉쳐 보이게 하는 저주파 마스크를 만드는 데 쓴다.
+float valueNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = hash21(i);
+  float b = hash21(i + vec2(1.0, 0.0));
+  float c = hash21(i + vec2(0.0, 1.0));
+  float d = hash21(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
 void main() {
   vec3 N = normalize(vNormal);
   vec3 V = normalize(vViewPosition);
@@ -60,13 +73,8 @@ void main() {
 
   float fresnel = pow(1.0 - max(dot(N, V), 0.0), uFresnelPower);
 
-  // 톤 셰이딩: 수심에 따른 색을 부드러운 그라디언트 대신 4단계로 뚝뚝 끊어
-  // 만화 같은 얕은물/깊은물 색 구역이 보이게 한다. floor()로 그냥 끊으면 실제
-  // 수조 수심대에서 값이 죄다 가장 낮은 단계(0)로 뭉개져 파란기가 사라지므로,
-  // 가장 가까운 단계로 반올림한다.
   float absorbFactor = clamp(vThickness * uAbsorption, 0.0, 1.0);
-  float bandedAbsorb = floor(absorbFactor * 4.0 + 0.5) / 3.0;
-  vec3 absorbed = mix(refracted, uDeepColor, bandedAbsorb);
+  vec3 absorbed = mix(refracted, uDeepColor, absorbFactor);
 
   vec3 worldNormal = normalize(vWorldNormal);
   vec3 worldViewDir = normalize(cameraPosition - vWorldPosition);
@@ -82,17 +90,23 @@ void main() {
   vec3 base = mix(absorbed, uSkyColor, fresnel * 0.45);
   vec3 color = mix(base, min(skyReflectTint, vec3(1.6)), fresnel * 0.4);
 
-  float spec = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 180.0) * 0.45;
+  float spec = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 70.0) * 0.5;
   color += vec3(1.0, 0.97, 0.9) * spec;
 
-  // 햇빛 아래 물결이 반짝이는 잔별 같은 스파클: 표면을 잘게 쪼갠 셀마다 무작위로
-  // 반짝였다 꺼지게 하고, 실제 빛 반사 방향과 가까운 곳에서만 밝게 보이도록
-  // 스펙큘러 강도로 한 번 더 눌러준다(전체 표면에 고르게 뿌려지지 않게).
-  vec2 sparkleCell = floor(vWorldPosition.xz * 55.0 + hash21(floor(vWorldPosition.xz * 3.0)) * 10.0);
-  float sparkleFlicker = hash21(sparkleCell + floor(uTime * 6.0));
-  float sparkleOn = step(0.985, hash21(sparkleCell)) * step(0.5, sparkleFlicker);
+  // 햇빛 아래 물결이 반짝이는 스파클. 점을 화면 전체에 고르게 흩뿌리면 별처럼
+  // 인공적으로 보이므로, 저주파 값 노이즈로 "반짝임이 뭉치는 구역(클러스터)"을
+  // 먼저 만들고, 그 구역 안에서만 확률적으로 반짝이는 점이 뜨게 한다. 클러스터
+  // 자체도 시간에 따라 천천히 흘러가 실제 윤슬처럼 자연스럽게 움직인다.
+  vec2 drift = vec2(uTime * 0.05, uTime * 0.035);
+  float cluster = valueNoise(vWorldPosition.xz * 1.8 + drift) * 0.6 + valueNoise(vWorldPosition.xz * 4.0 - drift * 1.7) * 0.4;
+  cluster = smoothstep(0.42, 0.72, cluster);
+
+  vec2 sparkleCell = floor(vWorldPosition.xz * 70.0);
+  float sparkleFlicker = hash21(sparkleCell + floor(uTime * 5.0));
+  float sparkleThreshold = mix(0.997, 0.93, cluster);
+  float sparkleOn = step(sparkleThreshold, hash21(sparkleCell)) * step(0.5, sparkleFlicker);
   float sparkleFalloff = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 6.0);
-  color += vec3(1.0, 0.98, 0.92) * sparkleOn * sparkleFalloff * 1.8;
+  color += vec3(1.0, 0.98, 0.92) * sparkleOn * sparkleFalloff * cluster * 3.0;
 
   // 벽 위로 넘친 지점은 흰 거품이 살짝 스치듯 밝아졌다 식는다.
   color += vec3(0.9, 0.95, 1.0) * vOverflow * 0.5;

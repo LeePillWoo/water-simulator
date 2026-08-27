@@ -1,5 +1,4 @@
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
-import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { MOUSE, TOUCH } from 'three'
 import { Lab } from './Lab'
 import { TankStructure } from './water/TankStructure'
@@ -33,9 +32,6 @@ export function Scene() {
         <WaterSurface />
         <FloatingBodies />
       </TiltRig>
-      <EffectComposer>
-        <Bloom mipmapBlur luminanceThreshold={0.95} luminanceSmoothing={0.15} intensity={0.4} radius={0.4} />
-      </EffectComposer>
     </>
   )
 }
