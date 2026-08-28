@@ -194,10 +194,10 @@ button:disabled {
   pointer-events: none;
 }
 
-.duck-splat {
-  display: inline-block;
-  font-size: 56px;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+.duck-splat-svg {
+  display: block;
+  transform-origin: center;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
   animation: duck-splat-pop 1.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
 }
 
