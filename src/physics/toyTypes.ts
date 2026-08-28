@@ -38,13 +38,19 @@ export const TOY_DEFS: Record<BallType, ToyDef> = {
     parts: [{ radius: 0.1, scale: [1, 1, 1], position: [0, 0, 0], color: '#9aa0a8', roughness: 0.3, metalness: 0.9 }],
   },
   boat: {
-    label: '장난감 배',
+    label: '돛단배',
     density: 180,
     physicsRadius: 0.16,
     canWander: true,
     parts: [
-      { radius: 0.13, scale: [1.7, 0.4, 1.0], position: [0, 0, 0], color: '#d9503f', roughness: 0.55, metalness: 0.05 },
-      { radius: 0.09, scale: [0.75, 0.7, 0.75], position: [0, 0.1, 0], color: '#f2efe9', roughness: 0.7, metalness: 0 },
+      // 선체 — 젖음 셰이더 적용
+      { radius: 0.13, scale: [1.7, 0.4, 1.0], position: [0, 0, 0], color: '#8a5a34', roughness: 0.6, metalness: 0.05 },
+      // 돛대
+      { radius: 0.012, scale: [1, 9, 1], position: [0, 0.16, 0], color: '#d8c39a', roughness: 0.7, metalness: 0 },
+      // 돛
+      { radius: 0.09, scale: [1.2, 1.3, 0.06], position: [0, 0.17, 0], color: '#fbf6ea', roughness: 0.8, metalness: 0 },
+      // 돛대 꼭대기 깃발
+      { radius: 0.018, scale: [1, 0.5, 1], position: [0, 0.29, 0], color: '#d9503f', roughness: 0.6, metalness: 0 },
     ],
   },
   duck: {
@@ -56,6 +62,9 @@ export const TOY_DEFS: Record<BallType, ToyDef> = {
       { radius: 0.1, scale: [1.15, 0.95, 1.05], position: [0, 0, 0], color: '#ffd23f', roughness: 0.5, metalness: 0 },
       { radius: 0.055, scale: [1, 1, 1], position: [0.08, 0.1, 0], color: '#ffd23f', roughness: 0.5, metalness: 0 },
       { radius: 0.035, scale: [1.4, 0.6, 1], position: [0.14, 0.09, 0], color: '#ff9a2e', roughness: 0.6, metalness: 0 },
+      // 눈 (양쪽)
+      { radius: 0.018, scale: [1, 1, 1], position: [0.115, 0.115, 0.04], color: '#221c16', roughness: 0.2, metalness: 0 },
+      { radius: 0.018, scale: [1, 1, 1], position: [0.115, 0.115, -0.04], color: '#221c16', roughness: 0.2, metalness: 0 },
     ],
   },
 }
