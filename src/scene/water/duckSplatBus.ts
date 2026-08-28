@@ -16,6 +16,9 @@ export interface DuckSplatEvent {
 }
 
 export const SPLAT_LIFETIME_MS = 1400
+// styles.css의 duck-splat-pop/-flash 애니메이션이 "작은 점 -> 순식간에 확대되며
+// 날아와 부딪힘"을 표현하는 지점(11%, 0.15s)과 맞춘 값 — 이 값을 바꾸면 CSS 쪽도 같이 맞춰야 한다.
+export const IMPACT_SOUND_DELAY_MS = 150
 const MAX_CONCURRENT_SPLATS = 3
 
 type Listener = (event: DuckSplatEvent) => void

@@ -15,7 +15,7 @@ import {
 } from '../../physics/ballMaterial'
 import { TOY_DEFS, type BallType } from '../../physics/toyTypes'
 import { playSplash, playFloorBreak, playDuckSplat, playQuack } from '../../audio/soundEngine'
-import { tryEmitDuckSplat } from './duckSplatBus'
+import { tryEmitDuckSplat, IMPACT_SOUND_DELAY_MS } from './duckSplatBus'
 import {
   SIM_GRAVITY,
   IRON_BREAK_COUNT,
@@ -40,7 +40,9 @@ function triggerDuckScreenSplat(canvas: HTMLCanvasElement): boolean {
   const y = rect.top + marginY + Math.random() * Math.max(0, rect.height - marginY * 2)
   const rotation = (Math.random() * 2 - 1) * 30
   const didSplat = tryEmitDuckSplat({ x, y, rotation })
-  if (didSplat) playDuckSplat()
+  // 화면 오버레이는 "작은 점에서 순식간에 확대되며 날아오는" 연출을 먼저 재생하므로,
+  // 부딪히는 소리도 그 도착 순간에 맞춰 살짝 늦춰 재생한다.
+  if (didSplat) setTimeout(playDuckSplat, IMPACT_SOUND_DELAY_MS)
   return didSplat
 }
 
