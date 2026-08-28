@@ -1,5 +1,6 @@
 import { TANK_WIDTH, TANK_DEPTH, TANK_WALL_HEIGHT, WALL_THK, FLOOR_Y } from '../../labLayout'
 import { GlassWall } from './GlassWall'
+import { FloorCrack } from './FloorCrack'
 
 const wallCy = FLOOR_Y + TANK_WALL_HEIGHT / 2
 
@@ -12,6 +13,7 @@ export function TankStructure() {
         <boxGeometry args={[TANK_WIDTH, WALL_THK, TANK_DEPTH]} />
         <meshStandardMaterial color="#2f9dc2" roughness={0.7} />
       </mesh>
+      <FloorCrack />
 
       <GlassWall args={[TANK_WIDTH, TANK_WALL_HEIGHT, WALL_THK]} position={[0, wallCy, -TANK_DEPTH / 2 - WALL_THK / 2]} />
       <GlassWall args={[TANK_WIDTH, TANK_WALL_HEIGHT, WALL_THK]} position={[0, wallCy, TANK_DEPTH / 2 + WALL_THK / 2]} />

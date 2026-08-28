@@ -116,42 +116,68 @@ export function playQuack(urgency: number) {
   }
 }
 
-/** 오리가 격렬하게 튀어올라 화면(카메라 렌즈)에 부딪히는 순간의 귀여운 "뽁-찍" 소리. */
+/** 오리가 격렬하게 튀어올라 화면(카메라 렌즈)에 부딪히는 순간의 "빠직-뽁-찍" 소리.
+ * 유리를 때리는 날카로운 크랙 + 묵직한 스매시 + 우스꽝스러운 삑을 겹쳐 임팩트를 세게 낸다. */
 export function playDuckSplat() {
   const c = getCtx()
   if (!c) return
   const now = c.currentTime
 
   const master = c.createGain()
-  master.gain.value = 0.5
+  master.gain.value = 0.85
   master.connect(c.destination)
 
-  // 부딪히는 순간의 둔탁한 "뽁".
+  // 유리에 정통으로 맞는 순간의 날카로운 "빠직" 크랙.
+  const crack = c.createBufferSource()
+  crack.buffer = getNoiseBuffer(c, 0.09)
+  const crackFilter = c.createBiquadFilter()
+  crackFilter.type = 'highpass'
+  crackFilter.frequency.value = 1800
+  const crackGain = c.createGain()
+  crackGain.gain.setValueAtTime(1.0, now)
+  crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
+  crack.connect(crackFilter).connect(crackGain).connect(master)
+  crack.start(now)
+  crack.stop(now + 0.1)
+
+  // 부딪히는 순간의 묵직한 "퍽" 스매시 (기존 뽁보다 낮고 세게).
   const thump = c.createBufferSource()
-  thump.buffer = getNoiseBuffer(c, 0.05)
+  thump.buffer = getNoiseBuffer(c, 0.09)
   const thumpFilter = c.createBiquadFilter()
   thumpFilter.type = 'lowpass'
-  thumpFilter.frequency.value = 700
+  thumpFilter.frequency.value = 500
   const thumpGain = c.createGain()
-  thumpGain.gain.setValueAtTime(0.7, now)
-  thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
+  thumpGain.gain.setValueAtTime(1.0, now)
+  thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09)
   thump.connect(thumpFilter).connect(thumpGain).connect(master)
   thump.start(now)
-  thump.stop(now + 0.06)
+  thump.stop(now + 0.1)
+
+  // 임팩트에 무게를 더하는 저음 펀치.
+  const punch = c.createOscillator()
+  punch.type = 'sine'
+  punch.frequency.setValueAtTime(150, now)
+  punch.frequency.exponentialRampToValueAtTime(38, now + 0.14)
+  const punchGain = c.createGain()
+  punchGain.gain.setValueAtTime(0.7, now)
+  punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16)
+  punch.connect(punchGain).connect(master)
+  punch.start(now)
+  punch.stop(now + 0.18)
 
   // 납작해지며 삑 올라갔다 뚝 떨어지는 우스꽝스러운 삑.
   const squeak = c.createOscillator()
   squeak.type = 'triangle'
-  squeak.frequency.setValueAtTime(260, now + 0.02)
-  squeak.frequency.exponentialRampToValueAtTime(980, now + 0.11)
-  squeak.frequency.exponentialRampToValueAtTime(140, now + 0.22)
+  squeak.frequency.setValueAtTime(260, now + 0.03)
+  squeak.frequency.exponentialRampToValueAtTime(1080, now + 0.13)
+  squeak.frequency.exponentialRampToValueAtTime(140, now + 0.25)
   const squeakGain = c.createGain()
-  squeakGain.gain.setValueAtTime(0.001, now + 0.02)
-  squeakGain.gain.linearRampToValueAtTime(0.32, now + 0.05)
-  squeakGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24)
+  squeakGain.gain.setValueAtTime(0.001, now + 0.03)
+  squeakGain.gain.linearRampToValueAtTime(0.5, now + 0.06)
+  squeakGain.gain.exponentialRampToValueAtTime(0.001, now + 0.27)
   squeak.connect(squeakGain).connect(master)
-  squeak.start(now + 0.02)
-  squeak.stop(now + 0.26)
+  squeak.start(now + 0.03)
+  squeak.stop(now + 0.29)
 }
 
 /** 쇠공 과적으로 수조 바닥이 깨지는 순간: 쩍 갈라지는 크랙 + 콸콸 물이 빠지는 소리. */

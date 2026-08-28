@@ -77,16 +77,18 @@ export function ScreenSplat() {
                 ))}
               </g>
 
-              {/* 납작해진 오리 — 실제 게임 속 오리 배색(#ffd23f/#ff9a2e)을 그대로 쓴다. */}
-              <ellipse cx="-34" cy="10" rx="17" ry="8" fill="#ffd23f" transform="rotate(-22 -34 10)" />
-              <ellipse cx="34" cy="10" rx="17" ry="8" fill="#ffd23f" transform="rotate(22 34 10)" />
-              <ellipse cx="-13" cy="27" rx="7" ry="3.5" fill="#ff9a2e" />
-              <ellipse cx="13" cy="27" rx="7" ry="3.5" fill="#ff9a2e" />
-              <ellipse cx="0" cy="6" rx="36" ry="16" fill="#ffd23f" />
-              <path d="M -7 12 L 7 12 L 0 23 Z" fill="#ff9a2e" />
-              <g stroke="#221c16" strokeWidth="1.4" fill="none" strokeLinecap="round">
-                <polyline points={EYE_SPIRAL} transform="translate(-13 -6) scale(1.3)" />
-                <polyline points={EYE_SPIRAL} transform="translate(13 -6) scale(1.3)" />
+              {/* 납작해진 오리 — 실제 게임 속 오리 배색(#ffd23f/#ff9a2e)을 그대로 쓴다.
+                  유리에 정면으로 짓눌린 느낌을 내려고 몸통을 세로로 길쭉하게 찌그러뜨리지
+                  않고 동그랗게 유지하고, 날개만 양옆으로 넓게 펼친다. */}
+              <ellipse cx="-42" cy="6" rx="21" ry="11" fill="#ffd23f" transform="rotate(-10 -42 6)" />
+              <ellipse cx="42" cy="6" rx="21" ry="11" fill="#ffd23f" transform="rotate(10 42 6)" />
+              <ellipse cx="-15" cy="35" rx="8" ry="4" fill="#ff9a2e" />
+              <ellipse cx="15" cy="35" rx="8" ry="4" fill="#ff9a2e" />
+              <circle cx="0" cy="4" r="32" fill="#ffd23f" />
+              <path d="M -9 8 L 9 8 L 0 24 Z" fill="#ff9a2e" />
+              <g stroke="#221c16" strokeWidth="1.5" fill="none" strokeLinecap="round">
+                <polyline points={EYE_SPIRAL} transform="translate(-13 -8) scale(1.4)" />
+                <polyline points={EYE_SPIRAL} transform="translate(13 -8) scale(1.4)" />
               </g>
             </svg>
           </div>
