@@ -186,8 +186,31 @@ button:disabled {
   }
 }
 
-/* 오리가 화면에 부딪혀 납작해지는 개그 연출: 클릭을 막지 않고, 순간적으로
-   눌렸다가 잠깐 붙어있다 사라진다. */
+/* 오리가 화면에 부딪혀 납작해지는 개그 연출. 3D 씬 속 물체가 아니라 "내 모니터/액정에
+   부딪혔다"는 느낌을 주기 위해, 뷰포트 기준 큰 크기로 화면 전체에 걸쳐 나타나고
+   (vmin 단위 — 씬 카메라 원근과 무관하게 항상 같은 크기), 부딪히는 순간 화면이
+   한 번 번쩍인 뒤 금 간 자국이 잠깐 남았다 사라진다. */
+.duck-splat-flash {
+  position: fixed;
+  z-index: 51;
+  pointer-events: none;
+  width: 140vmin;
+  height: 140vmin;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.3) 32%, transparent 65%);
+  animation: duck-splat-flash-fade 0.35s ease-out forwards;
+}
+
+@keyframes duck-splat-flash-fade {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .duck-splat-anchor {
   position: fixed;
   z-index: 50;
@@ -196,6 +219,8 @@ button:disabled {
 
 .duck-splat-svg {
   display: block;
+  width: 56vmin;
+  height: 56vmin;
   transform-origin: center;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
   animation: duck-splat-pop 1.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;

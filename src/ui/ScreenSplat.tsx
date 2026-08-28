@@ -54,38 +54,42 @@ export function ScreenSplat() {
   return (
     <>
       {splats.map((s) => (
-        <div
-          key={s.key}
-          className="duck-splat-anchor"
-          style={{ left: s.x, top: s.y, transform: `translate(-50%, -50%) rotate(${s.rotation}deg)` }}
-        >
-          <svg className="duck-splat-svg" viewBox="-100 -100 200 200" width="180" height="180" aria-hidden="true">
-            <circle cx="0" cy="0" r="55" fill="rgba(255,255,255,0.22)" />
+        <div key={s.key}>
+          {/* 부딪히는 순간 화면 전체가 살짝 번쩍: "3D 씬 안"이 아니라 내 모니터/액정
+              자체에 부딪혔다는 느낌을 준다. */}
+          <div className="duck-splat-flash" style={{ left: s.x, top: s.y }} />
+          <div
+            className="duck-splat-anchor"
+            style={{ left: s.x, top: s.y, transform: `translate(-50%, -50%) rotate(${s.rotation}deg)` }}
+          >
+            <svg className="duck-splat-svg" viewBox="-100 -100 200 200" aria-hidden="true">
+              <circle cx="0" cy="0" r="55" fill="rgba(255,255,255,0.22)" />
 
-            <g stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-              {CRACK_LINES.map((pts, i) => (
-                <polyline key={i} points={pts} />
-              ))}
-            </g>
+              <g stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                {CRACK_LINES.map((pts, i) => (
+                  <polyline key={i} points={pts} />
+                ))}
+              </g>
 
-            <g fill="#fff6cf">
-              {SPARKLE_SPOTS.map((spot, i) => (
-                <polygon key={i} points={SPARKLE_STAR} transform={`translate(${spot.x} ${spot.y}) scale(${spot.scale})`} />
-              ))}
-            </g>
+              <g fill="#fff6cf">
+                {SPARKLE_SPOTS.map((spot, i) => (
+                  <polygon key={i} points={SPARKLE_STAR} transform={`translate(${spot.x} ${spot.y}) scale(${spot.scale})`} />
+                ))}
+              </g>
 
-            {/* 납작해진 오리 — 실제 게임 속 오리 배색(#ffd23f/#ff9a2e)을 그대로 쓴다. */}
-            <ellipse cx="-34" cy="10" rx="17" ry="8" fill="#ffd23f" transform="rotate(-22 -34 10)" />
-            <ellipse cx="34" cy="10" rx="17" ry="8" fill="#ffd23f" transform="rotate(22 34 10)" />
-            <ellipse cx="-13" cy="27" rx="7" ry="3.5" fill="#ff9a2e" />
-            <ellipse cx="13" cy="27" rx="7" ry="3.5" fill="#ff9a2e" />
-            <ellipse cx="0" cy="6" rx="36" ry="16" fill="#ffd23f" />
-            <path d="M -7 12 L 7 12 L 0 23 Z" fill="#ff9a2e" />
-            <g stroke="#221c16" strokeWidth="1.4" fill="none" strokeLinecap="round">
-              <polyline points={EYE_SPIRAL} transform="translate(-13 -6) scale(1.3)" />
-              <polyline points={EYE_SPIRAL} transform="translate(13 -6) scale(1.3)" />
-            </g>
-          </svg>
+              {/* 납작해진 오리 — 실제 게임 속 오리 배색(#ffd23f/#ff9a2e)을 그대로 쓴다. */}
+              <ellipse cx="-34" cy="10" rx="17" ry="8" fill="#ffd23f" transform="rotate(-22 -34 10)" />
+              <ellipse cx="34" cy="10" rx="17" ry="8" fill="#ffd23f" transform="rotate(22 34 10)" />
+              <ellipse cx="-13" cy="27" rx="7" ry="3.5" fill="#ff9a2e" />
+              <ellipse cx="13" cy="27" rx="7" ry="3.5" fill="#ff9a2e" />
+              <ellipse cx="0" cy="6" rx="36" ry="16" fill="#ffd23f" />
+              <path d="M -7 12 L 7 12 L 0 23 Z" fill="#ff9a2e" />
+              <g stroke="#221c16" strokeWidth="1.4" fill="none" strokeLinecap="round">
+                <polyline points={EYE_SPIRAL} transform="translate(-13 -6) scale(1.3)" />
+                <polyline points={EYE_SPIRAL} transform="translate(13 -6) scale(1.3)" />
+              </g>
+            </svg>
+          </div>
         </div>
       ))}
     </>
