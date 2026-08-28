@@ -26,3 +26,18 @@ export const TILT_DAMPING = 14
 export const WATER_DENSITY = 1000 // kg/m^3
 export const BALL_DROP_HEIGHT = FLOOR_Y + TANK_WALL_HEIGHT + 0.6
 export const MAX_BALLS_PER_TYPE = 50
+
+// 쇠공 과적 이스터에그: 이 개수를 넘기면 수조 바닥이 깨져 물이 빠진다.
+export const IRON_BREAK_COUNT = 10
+export const FLOOR_DRAIN_RATE = 0.5 // m/s, 바닥이 깨진 뒤 수위가 낮아지는 속도
+
+// 오리 모니터 충돌 이스터에그: 오리가 이 높이(월드 Y)를 넘어서 튀어오르면
+// 화면(카메라 렌즈)에 부딪혀 납작해지는 연출이 터진다.
+export const DUCK_SCREEN_SPLAT_HEIGHT = FLOOR_Y + TANK_WALL_HEIGHT + 0.5
+
+// 수조를 흔들 때 오리가 꽥꽥거리는 정도. tiltState의 각속도 크기를 0~1로
+// 정규화하는 기준값과, 그 강도에 따라 좁아지는 울음 간격(초).
+export const QUACK_SHAKE_REFERENCE = 3.2
+export const QUACK_MIN_SHAKE = 0.09
+export const QUACK_INTERVAL_MAX = 1.1
+export const QUACK_INTERVAL_MIN = 0.2

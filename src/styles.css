@@ -185,3 +185,41 @@ button:disabled {
     font-size: 13px;
   }
 }
+
+/* 오리가 화면에 부딪혀 납작해지는 개그 연출: 클릭을 막지 않고, 순간적으로
+   눌렸다가 잠깐 붙어있다 사라진다. */
+.duck-splat-anchor {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.duck-splat {
+  display: inline-block;
+  font-size: 56px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  animation: duck-splat-pop 1.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes duck-splat-pop {
+  0% {
+    transform: scale(1, 1);
+    opacity: 0;
+  }
+  8% {
+    transform: scale(1.35, 0.2);
+    opacity: 1;
+  }
+  20% {
+    transform: scale(0.95, 0.38);
+    opacity: 1;
+  }
+  78% {
+    transform: scale(0.95, 0.38);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92, 0.32);
+    opacity: 0;
+  }
+}

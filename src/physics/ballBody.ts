@@ -3,7 +3,15 @@ import type { WaveSolver } from './waveSolver'
 import type { BallSpec } from '../store/useSimStore'
 import type { BallType } from './toyTypes'
 import { TOY_DEFS } from './toyTypes'
-import { TANK_WIDTH, TANK_DEPTH, FLOOR_Y, SIM_GRAVITY, WATER_DENSITY, BALL_DROP_HEIGHT } from '../labLayout'
+import {
+  TANK_WIDTH,
+  TANK_DEPTH,
+  FLOOR_Y,
+  SIM_GRAVITY,
+  WATER_DENSITY,
+  BALL_DROP_HEIGHT,
+  DUCK_SCREEN_SPLAT_HEIGHT,
+} from '../labLayout'
 
 export interface BallBody {
   id: number
@@ -20,6 +28,8 @@ export interface BallBody {
   wasWet: boolean
   /** 유영 가능한 장난감(오리/배)의 현재 진행 방향(라디안). 렌더링에서 그대로 회전값으로 쓴다. */
   heading: number
+  /** 오리가 이번 공중 체공에서 이미 화면-충돌 연출을 터뜨렸는지 — 물에 다시 닿으면 풀린다. */
+  hasScreenSplatted: boolean
 }
 
 const bodies = new Map<number, BallBody>()
@@ -70,6 +80,7 @@ export function getOrCreateBody(spec: BallSpec): BallBody {
     waterY: 0,
     wasWet: false,
     heading: Math.random() * Math.PI * 2,
+    hasScreenSplatted: false,
   }
   bodies.set(spec.id, body)
   return body
@@ -104,6 +115,7 @@ export function stepBody(
   accelX: number,
   accelZ: number,
   onSplash?: (type: BallType, intensity: number) => void,
+  onDuckScreenSplat?: (body: BallBody) => void,
 ) {
   const waterY = solver.sampleHeight(body.position.x, body.position.z)
   body.waterY = waterY
@@ -124,6 +136,18 @@ export function stepBody(
     }
   }
   body.wasWet = isWet
+
+  // 오리가 격렬한 출렁임에 튕겨 나가 화면 높이까지 솟구치면, "모니터에 부딪혀
+  // 납작해지는" 이스터에그를 한 번 터뜨린다. 물에 다시 닿기 전까지는 같은
+  // 체공에서 반복 트리거되지 않게 한다.
+  if (body.type === 'duck') {
+    if (isWet) {
+      body.hasScreenSplatted = false
+    } else if (!body.hasScreenSplatted && body.position.y > DUCK_SCREEN_SPLAT_HEIGHT) {
+      body.hasScreenSplatted = true
+      onDuckScreenSplat?.(body)
+    }
+  }
 
   const buoyancyAccel = (WATER_DENSITY * SIM_GRAVITY * submergedVolume) / body.mass
   body.velocity.y += (-SIM_GRAVITY + buoyancyAccel) * dt

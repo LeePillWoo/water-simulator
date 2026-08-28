@@ -9,6 +9,7 @@ import {
   HEIGHT_SMOOTH,
   MIN_WATER_DEPTH,
   OVERFLOW_MARGIN,
+  FLOOR_DRAIN_RATE,
 } from '../labLayout'
 
 const N = GRID_RES
@@ -40,6 +41,8 @@ export class WaveSolver {
   normals = new Float32Array(SIZE * 3)
   /** 벽 위로 넘친 지점에서 1로 튀었다가 서서히 식는 거품 하이라이트 강도. */
   overflow = new Float32Array(SIZE)
+  /** 쇠공 과적으로 바닥이 깨졌는지 — 한 번 켜지면 수위가 바닥까지 서서히 빠진다. */
+  draining = false
 
   private h2 = new Float32Array(SIZE)
   private u2 = new Float32Array(SIZE)
@@ -54,16 +57,35 @@ export class WaveSolver {
     this.u.fill(0)
     this.v.fill(0)
     this.overflow.fill(0)
+    this.draining = false
     this.computeNormals()
+  }
+
+  /** 바닥이 깨졌음을 알린다. 이미 깨진 상태면 아무 일도 하지 않는다.
+   * 반환값은 "이번 호출로 처음 깨졌는지"라 호출부에서 파열 연출을 한 번만 트리거하는 데 쓸 수 있다. */
+  breakFloor(): boolean {
+    if (this.draining) return false
+    this.draining = true
+    return true
   }
 
   step(dt: number, accelX: number, accelZ: number) {
     const clamped = Math.min(dt, MAX_DT)
     if (clamped <= 0) return
+    if (this.draining) this.applyDrain(clamped)
     const substeps = Math.max(1, Math.ceil(clamped / MAX_SUBSTEP_DT))
     const sub = clamped / substeps
     for (let s = 0; s < substeps; s++) this.substep(sub, accelX, accelZ)
     this.computeNormals()
+  }
+
+  // 바닥이 깨진 뒤: 격자 전체 수위를 균일하게 낮춘다. 실제 바닥으로 뚫고 내려가지는
+  // 못하게 매 substep의 clampToTankBounds가 계속 MIN_H로 막아주므로, 여기서는
+  // 그냥 계속 퍼내기만 하면 자연스럽게 "물이 다 빠진 마른 바닥" 상태에 수렴한다.
+  private applyDrain(dt: number) {
+    const drop = FLOOR_DRAIN_RATE * dt
+    const { h } = this
+    for (let idx = 0; idx < SIZE; idx++) h[idx] -= drop
   }
 
   sampleHeight(worldX: number, worldZ: number): number {

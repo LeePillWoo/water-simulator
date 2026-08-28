@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { Scene } from './scene/Scene'
 import { ControlPanel } from './ui/ControlPanel'
+import { ScreenSplat } from './ui/ScreenSplat'
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
       <div className="ui-overlay">
         <ControlPanel />
       </div>
+      <ScreenSplat />
     </div>
   )
 }
