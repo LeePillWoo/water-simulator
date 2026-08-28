@@ -67,6 +67,26 @@ void main() {
   vec3 N = normalize(vNormal);
   vec3 V = normalize(vViewPosition);
 
+  // 시뮬레이션 격자(64x64)만으로는 표현 못 하는 잔물결을, 실제 노멀 위에
+  // 시각 전용 디테일로 얹는다. 굴절은 이 디테일이 안 섞인 매끈한 N을 그대로
+  // 써서(예전에 여기 섞었다가 웨이크 근처에서 유령 겹침이 생겼던 버그를
+  // 되풀이하지 않는다), 잔물결이 배경을 왜곡하지 않고 표면 질감으로만 보이게 한다.
+  vec2 rippleUV = vWorldPosition.xz * 10.0 + vec2(uTime * 0.05, uTime * 0.035);
+  float rippleC = valueNoise(rippleUV);
+  float rippleX = valueNoise(rippleUV + vec2(0.04, 0.0));
+  float rippleZ = valueNoise(rippleUV + vec2(0.0, 0.04));
+  vec2 detailSlope = vec2(rippleC - rippleX, rippleC - rippleZ) * 3.5;
+
+  vec2 rippleUV2 = vWorldPosition.xz * 22.0 - vec2(uTime * 0.07, -uTime * 0.05);
+  float rippleC2 = valueNoise(rippleUV2);
+  float rippleX2 = valueNoise(rippleUV2 + vec2(0.03, 0.0));
+  float rippleZ2 = valueNoise(rippleUV2 + vec2(0.0, 0.03));
+  detailSlope += vec2(rippleC2 - rippleX2, rippleC2 - rippleZ2) * 2.2;
+
+  vec3 detailNormal = normalize(vec3(-detailSlope.x, 1.0, -detailSlope.y));
+  // 파인 잔물결 결이 살짝만 보이도록(과하면 다시 겹쳐 보이는 문제로 이어진다).
+  vec3 richN = normalize(mix(N, detailNormal, 0.15));
+
   vec2 uv = gl_FragCoord.xy / uResolution;
   // 떠 있는 물체가 유영하며 만드는 국소적인 웨이크(급격한 노멀 변화) 근처에서
   // 배경(굴절) 샘플이 화면상 엉뚱하게 먼 곳까지 튀지 않도록, 오프셋 자체의
@@ -76,7 +96,7 @@ void main() {
   vec2 refractedUV = clamp(uv + refractOffset, 0.0, 1.0);
   vec3 refracted = texture2D(tBackground, refractedUV).rgb;
 
-  float fresnel = pow(1.0 - max(dot(N, V), 0.0), uFresnelPower);
+  float fresnel = pow(1.0 - max(dot(richN, V), 0.0), uFresnelPower);
 
   float absorbFactor = clamp(vThickness * uAbsorption, 0.0, 1.0);
   vec3 absorbed = mix(refracted, uDeepColor, absorbFactor);
@@ -95,27 +115,20 @@ void main() {
   vec3 base = mix(absorbed, uSkyColor, fresnel * 0.45);
   vec3 color = mix(base, min(skyReflectTint, vec3(1.6)), fresnel * 0.4);
 
-  float spec = pow(max(dot(reflect(-uLightDirView, N), V), 0.0), 70.0) * 0.5;
+  float spec = pow(max(dot(reflect(-uLightDirView, richN), V), 0.0), 90.0) * 0.6;
   color += vec3(1.0, 0.97, 0.9) * spec;
 
   // 햇빛 아래 물결이 일렁이며 반짝이는 윤슬. 독립적으로 떠다니는 노이즈
-  // 텍스처가 아니라, 시뮬레이션이 실제로 계산한 물결 노멀(N) 위에 아주 작은
-  // 잔물결 디테일만 살짝 얹어서 스펙큘러를 한 번 더 계산한다 — 그러면
-  // 반짝임이 실제 파도가 기울어지고 움직이는 방향을 그대로 따라가며 자연스럽게
-  // 흐른다. 큰 뭉게구름 같은 저주파 구역(클러스터)으로 한 번 더 걸러서,
-  // 표면 전체가 아니라 무리 지어 나타나게 한다.
+  // 텍스처가 아니라, 시뮬레이션이 실제로 계산한 물결 노멀(N) 위에 잔물결
+  // 디테일을 얹은 richN으로 스펙큘러를 한 번 더 계산한다 — 그러면 반짝임이
+  // 실제 파도가 기울어지고 움직이는 방향을 그대로 따라가며 자연스럽게 흐른다.
+  // 큰 뭉게구름 같은 저주파 구역(클러스터)으로 한 번 더 걸러서, 표면 전체가
+  // 아니라 무리 지어 나타나게 한다.
   vec2 clusterDrift = vec2(uTime * 0.05, uTime * 0.035);
   float cluster = valueNoise(vWorldPosition.xz * 1.8 + clusterDrift) * 0.6 + valueNoise(vWorldPosition.xz * 4.0 - clusterDrift * 1.7) * 0.4;
   cluster = smoothstep(0.4, 0.72, cluster);
 
-  vec2 rippleUV = vWorldPosition.xz * 10.0 + vec2(uTime * 0.05, uTime * 0.035);
-  float rippleC = valueNoise(rippleUV);
-  float rippleX = valueNoise(rippleUV + vec2(0.04, 0.0));
-  float rippleZ = valueNoise(rippleUV + vec2(0.0, 0.04));
-  vec2 detailSlope = vec2(rippleC - rippleX, rippleC - rippleZ) * 3.5;
-  vec3 detailNormal = normalize(vec3(-detailSlope.x, 1.0, -detailSlope.y));
   vec3 sparkleN = normalize(mix(N, detailNormal, 0.4));
-
   float sparkleSpec = pow(max(dot(reflect(-uLightDirView, sparkleN), V), 0.0), 42.0);
   color += vec3(1.0, 0.98, 0.9) * sparkleSpec * cluster * 1.6;
 
