@@ -20,6 +20,7 @@ uniform sampler2D uHeightMap;
 uniform float uRestDepth;
 uniform float uTankWidth;
 uniform float uTankDepth;
+uniform float uTankWallHeight;
 uniform vec3 uGlassColor;
 uniform vec3 uShallowColor;
 uniform vec3 uDeepColor;
@@ -61,6 +62,15 @@ void main() {
   // 수면선 바로 위아래로 얇고 밝은 하이라이트 띠(메니스커스)를 얹는다.
   float waterline = 1.0 - smoothstep(0.0, 0.035, abs(depthBelow));
   color += vec3(waterline * 0.25);
+
+  // 물리적으로 정확한 반사 대신, 유리에 붓으로 슥 그은 듯한 대각선 빛 하이라이트를
+  // 고정된 위치에 얹는다 — 카메라 각도와 무관하게 항상 같은 자리에 보이는
+  // "그림 같은" 유리 반사 느낌을 낸다.
+  float heightFrac = clamp(vTankLocalPos.y / uTankWallHeight, 0.0, 1.0);
+  float along = uv.x + uv.y;
+  float diagonal = along * 0.5 + heightFrac * 0.85;
+  float paintedHighlight = smoothstep(0.48, 0.6, diagonal) - smoothstep(0.64, 0.82, diagonal);
+  color += vec3(1.0, 1.0, 0.97) * paintedHighlight * 0.4;
 
   float alpha = mix(uGlassOpacity, uWaterOpacity, wet);
   gl_FragColor = vec4(color, alpha);

@@ -94,7 +94,7 @@ export function WaterSurface() {
           uSkyColor: { value: new THREE.Color('#bfe3ff') },
           uAbsorption: { value: 0.35 },
           uFresnelPower: { value: 3.0 },
-          uRefractionStrength: { value: 0.045 },
+          uRefractionStrength: { value: 0.025 },
           uShoreFadeRange: { value: SHORE_FADE_RANGE },
           uTime: { value: 0 },
         },
