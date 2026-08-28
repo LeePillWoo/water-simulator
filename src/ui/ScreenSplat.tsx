@@ -24,15 +24,6 @@ const CRACK_LINES = [
   '0,0 26.8,-20.9 58.9,-34.0',
 ]
 
-// 반짝이 하나(별 8각) — 몇 군데 흩뿌려 재사용한다.
-const SPARKLE_STAR = '0.0,-6.0 1.7,-1.7 6.0,0.0 1.7,1.7 0.0,6.0 -1.7,1.7 -6.0,0.0 -1.7,-1.7'
-const SPARKLE_SPOTS = [
-  { x: -46, y: -34, scale: 1.1 },
-  { x: 40, y: -42, scale: 0.8 },
-  { x: 54, y: 16, scale: 0.9 },
-  { x: -52, y: 22, scale: 0.7 },
-]
-
 /** 오리가 격렬하게 튀어올라 화면(카메라 렌즈)에 부딪힐 때, 그 자리에 잠깐
  * 금 간 유리 + 어지러운 오리를 붙여놓는 개그 연출. 3D 씬과 무관한 순수 HTML/SVG 오버레이. */
 export function ScreenSplat() {
@@ -67,12 +58,6 @@ export function ScreenSplat() {
               <g stroke="rgba(255,255,255,0.85)" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
                 {CRACK_LINES.map((pts, i) => (
                   <polyline key={i} points={pts} />
-                ))}
-              </g>
-
-              <g fill="#fff6cf">
-                {SPARKLE_SPOTS.map((spot, i) => (
-                  <polygon key={i} points={SPARKLE_STAR} transform={`translate(${spot.x} ${spot.y}) scale(${spot.scale})`} />
                 ))}
               </g>
 
