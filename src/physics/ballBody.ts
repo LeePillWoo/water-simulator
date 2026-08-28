@@ -30,6 +30,9 @@ export interface BallBody {
   heading: number
   /** 오리가 이번 공중 체공에서 이미 화면-충돌 연출을 터뜨렸는지 — 물에 다시 닿으면 풀린다. */
   hasScreenSplatted: boolean
+  /** 오리가 물에 한 번이라도 닿은 적이 있는지 — 낙하 스폰 직후(아직 헤엄쳐본 적 없음)에는
+   * 화면-충돌 연출이 절대 터지지 않도록 막는 게이트. */
+  hasTouchedWater: boolean
 }
 
 const bodies = new Map<number, BallBody>()
@@ -81,6 +84,7 @@ export function getOrCreateBody(spec: BallSpec): BallBody {
     wasWet: false,
     heading: Math.random() * Math.PI * 2,
     hasScreenSplatted: false,
+    hasTouchedWater: false,
   }
   bodies.set(spec.id, body)
   return body
@@ -138,12 +142,14 @@ export function stepBody(
   body.wasWet = isWet
 
   // 오리가 격렬한 출렁임에 튕겨 나가 화면 높이까지 솟구치면, "모니터에 부딪혀
-  // 납작해지는" 이스터에그를 한 번 터뜨린다. 물에 다시 닿기 전까지는 같은
-  // 체공에서 반복 트리거되지 않게 한다.
+  // 납작해지는" 이스터에그를 한 번 터뜨린다. 낙하 스폰 지점이 이 높이 근처라
+  // hasTouchedWater로 "적어도 한 번 헤엄쳐본 뒤"에만 발동하게 막고, 물에 다시
+  // 닿기 전까지는 같은 체공에서 반복 트리거되지 않게 한다.
   if (body.type === 'duck') {
     if (isWet) {
+      body.hasTouchedWater = true
       body.hasScreenSplatted = false
-    } else if (!body.hasScreenSplatted && body.position.y > DUCK_SCREEN_SPLAT_HEIGHT) {
+    } else if (body.hasTouchedWater && !body.hasScreenSplatted && body.position.y > DUCK_SCREEN_SPLAT_HEIGHT) {
       body.hasScreenSplatted = true
       onDuckScreenSplat?.(body)
     }
