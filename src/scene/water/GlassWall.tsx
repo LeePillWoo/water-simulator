@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { wallVertexShader, wallFragmentShader } from './wallShader'
 import { waterFieldState } from './waterFieldState'
 import { getFallbackHeightTexture } from './heightFieldTexture'
-import { REST_WATER_DEPTH, TANK_WIDTH, TANK_DEPTH, TANK_WALL_HEIGHT } from '../../labLayout'
+import { REST_WATER_DEPTH, TANK_WIDTH, TANK_DEPTH } from '../../labLayout'
 
 interface GlassWallProps {
   args: [number, number, number]
@@ -26,7 +26,6 @@ export function GlassWall({ args, position }: GlassWallProps) {
           uRestDepth: { value: REST_WATER_DEPTH },
           uTankWidth: { value: TANK_WIDTH },
           uTankDepth: { value: TANK_DEPTH },
-          uTankWallHeight: { value: TANK_WALL_HEIGHT },
           uGlassColor: { value: new THREE.Color('#dff3fb') },
           uShallowColor: { value: new THREE.Color('#6fd2f2') },
           uDeepColor: { value: new THREE.Color('#1478ab') },

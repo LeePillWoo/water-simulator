@@ -29,7 +29,7 @@ TOON_GRADIENT.needsUpdate = true
 export const TOY_OUTLINE_MATERIAL = new THREE.MeshBasicMaterial({ color: '#12151a', side: THREE.BackSide })
 // 부품 크기에 비례한 비율이 아니라 월드 단위 고정 두께를 더한다 — 귀·부리처럼
 // 아주 작은 부품도 뚜렷한 윤곽선이 보이도록.
-export const TOY_OUTLINE_THICKNESS = 0.016
+export const TOY_OUTLINE_THICKNESS = 0.008
 
 /**
  * 몸통(parts[0])에 젖음 셰이딩을 입힌다: 물에 잠긴 부분만 물색으로 물들이고,
