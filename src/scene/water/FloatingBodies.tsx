@@ -14,9 +14,8 @@ import {
   TOY_OUTLINE_THICKNESS,
 } from '../../physics/ballMaterial'
 import { TOY_DEFS, type BallType } from '../../physics/toyTypes'
-import type { BallBody } from '../../physics/ballBody'
 import { playSplash, playFloorBreak, playDuckSplat, playQuack } from '../../audio/soundEngine'
-import { emitDuckSplat } from './duckSplatBus'
+import { tryEmitDuckSplat } from './duckSplatBus'
 import {
   SIM_GRAVITY,
   IRON_BREAK_COUNT,
@@ -30,17 +29,19 @@ import {
 // 지오메트리 하나를 모든 부품·모든 공이 공유한다.
 const UNIT_SPHERE = new THREE.SphereGeometry(1, 20, 16)
 
-const splatProjection = new THREE.Vector3()
-
-/** 오리의 3D 월드 위치를 화면 픽셀 좌표로 투영해, "화면에 부딪히는" 개그 연출을 그 자리에 띄운다. */
-function triggerDuckScreenSplat(body: BallBody, camera: THREE.Camera, canvas: HTMLCanvasElement) {
-  splatProjection.copy(body.position).project(camera)
-  if (splatProjection.z > 1) return // 카메라 뒤쪽
+/** 오리가 있는 3D 위치가 아니라, 모니터/액정 전체에 걸쳐 무작위 지점에 "화면에
+ * 부딪히는" 개그 연출을 띄운다 — 동시에 너무 많이 뜨는 중이면(duckSplatBus의 캡)
+ * 이번엔 건너뛰고 false를 반환한다. */
+function triggerDuckScreenSplat(canvas: HTMLCanvasElement): boolean {
   const rect = canvas.getBoundingClientRect()
-  const x = rect.left + (splatProjection.x * 0.5 + 0.5) * rect.width
-  const y = rect.top + (1 - (splatProjection.y * 0.5 + 0.5)) * rect.height
-  emitDuckSplat({ x, y, rotation: (Math.random() * 2 - 1) * 25 })
-  playDuckSplat()
+  const marginX = rect.width * 0.12
+  const marginY = rect.height * 0.12
+  const x = rect.left + marginX + Math.random() * Math.max(0, rect.width - marginX * 2)
+  const y = rect.top + marginY + Math.random() * Math.max(0, rect.height - marginY * 2)
+  const rotation = (Math.random() * 2 - 1) * 30
+  const didSplat = tryEmitDuckSplat({ x, y, rotation })
+  if (didSplat) playDuckSplat()
+  return didSplat
 }
 
 /** 나무공/쇠공/장난감들을 낙하시켜 부력·물속 저항·벽 충돌로 뜨거나 가라앉게 하고,
@@ -88,7 +89,11 @@ export function FloatingBodies() {
         accelX,
         accelZ,
         (_type, intensity) => playSplash(intensity),
-        (b) => triggerDuckScreenSplat(b, state.camera, state.gl.domElement),
+        (b) => {
+          if (triggerDuckScreenSplat(state.gl.domElement)) {
+            useSimStore.getState().removeBall(b.id)
+          }
+        },
       )
       const group = groupRefs.current.get(spec.id)
       group?.position.copy(body.position)

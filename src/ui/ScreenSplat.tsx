@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { subscribeDuckSplat, type DuckSplatEvent } from '../scene/water/duckSplatBus'
+import { subscribeDuckSplat, SPLAT_LIFETIME_MS, type DuckSplatEvent } from '../scene/water/duckSplatBus'
 
 interface ActiveSplat extends DuckSplatEvent {
   key: number
 }
 
 let nextKey = 1
-const SPLAT_LIFETIME_MS = 1400
 
 // 어지러운 눈: 원점을 중심으로 도는 나선(스파이럴) 폴리라인. 눈 하나에 재사용한다.
 const EYE_SPIRAL =

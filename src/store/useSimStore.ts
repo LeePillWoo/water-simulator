@@ -17,6 +17,7 @@ interface SimState {
   togglePlaying: () => void
   reset: () => void
   dropBall: (type: BallType) => void
+  removeBall: (id: number) => void
   clearBalls: () => void
 }
 
@@ -35,5 +36,6 @@ export const useSimStore = create<SimState>((set) => ({
       if (countOfType >= MAX_BALLS_PER_TYPE) return s
       return { balls: [...s.balls, { id: nextBallId++, type }] }
     }),
+  removeBall: (id) => set((s) => ({ balls: s.balls.filter((b) => b.id !== id) })),
   clearBalls: () => set({ balls: [] }),
 }))
