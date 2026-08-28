@@ -189,33 +189,9 @@ button:disabled {
 /* 오리가 화면에 부딪혀 납작해지는 개그 연출. 3D 씬 속 물체가 아니라 "내 모니터/액정에
    부딪혔다"는 느낌을 주기 위해, 뷰포트 기준 큰 크기로 화면 전체에 걸쳐 나타난다.
    물리적인 점프 궤적과 무관하게, 아주 작은 점에서 시작해 화면 쪽으로 순식간에
-   확 날아와 부딪히는(줌인) 연출을 먼저 재생한 뒤 — 그 "부딪힌 순간"에 맞춰
-   화면이 한 번 번쩍이고 소리가 울리며, 금 간 자국이 잠깐 남았다 사라진다.
-   (JS의 IMPACT_SOUND_DELAY_MS와 아래 0.15s 지연을 같은 타이밍으로 맞춰뒀다.) */
-.duck-splat-flash {
-  position: fixed;
-  z-index: 51;
-  pointer-events: none;
-  width: 140vmin;
-  height: 140vmin;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.3) 32%, transparent 65%);
-  animation: duck-splat-flash-fade 0.4s ease-out 0.15s backwards;
-}
-
-@keyframes duck-splat-flash-fade {
-  0% {
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
+   확 날아와 부딪히는(줌인) 연출을 먼저 재생한 뒤 — 그 "부딪힌 순간"에 맞춰 소리가
+   울리며, 금 간 자국이 잠깐 남았다 사라진다.
+   (JS의 IMPACT_SOUND_DELAY_MS를 아래 11% 키프레임 타이밍과 맞춰뒀다.) */
 .duck-splat-anchor {
   position: fixed;
   z-index: 50;
